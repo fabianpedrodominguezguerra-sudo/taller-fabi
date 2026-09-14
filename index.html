@@ -3,34 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.13</title>
+<title>Taller Fabi v0.15</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172238}
 header{background:#17365d;color:#fff;padding:14px 15px;position:sticky;top:0;z-index:5}
 header b{font-size:20px}
-main{max-width:800px;margin:auto;padding:12px 12px 105px}
+.headerRow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.syncBadge{font-size:12px;background:#fff2;border:1px solid #ffffff55;padding:6px 9px;border-radius:999px}
+main{max-width:850px;margin:auto;padding:12px 12px 110px}
 .card{background:#fff;border:1px solid #dce5ef;border-radius:15px;padding:14px;margin-bottom:11px}
 h2,h3{margin:0 0 10px}
 label{display:block;font-size:13px;color:#566274;margin:8px 0 4px}
 input,textarea,select{width:100%;padding:11px;border:1px solid #cbd6e2;border-radius:9px;font-size:16px}
-button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-weight:800;background:#1769c2;color:#fff}
-.green{background:#16844f}.light{background:#eaf0f7;color:#17365d}.red{background:#b42318}
-@media print{
-  body{background:#fff}
-  header,.nav,#hojas>.card:first-child,#caja{display:none!important}
-  main{max-width:none;padding:0}
-  #hojas{display:block!important}
-  #hojas>.card:last-child{display:none!important}
-  #printArea{display:block!important}
-}
-#printArea{display:none}
-.printSheet{font-family:Arial,sans-serif;color:#000;padding:18mm 15mm}
-.printSheet h1{font-size:22px;margin:0 0 14px;text-align:center}
-.printGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
-.printRow{margin-bottom:8px}
-.printLabel{font-weight:700}
-.printFull{grid-column:1/-1}
+button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-weight:800;background:#1769c2;color:#fff;cursor:pointer}
+.green{background:#16844f}.light{background:#eaf0f7;color:#17365d}.red{background:#b42318}.orange{background:#b86a00}
 .field{display:grid;grid-template-columns:1fr 54px;gap:6px;align-items:end}
 .mic{font-size:20px;padding:11px 3px;background:#eaf0f7;color:#17365d}
 .status{background:#eef3f8;padding:10px;border-radius:9px;margin:8px 0;font-weight:700}
@@ -38,61 +26,111 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 .metric{font-size:31px;font-weight:800}
 .item{border:1px solid #dce5ef;border-radius:10px;padding:10px;margin:7px 0}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}
-.hide{display:none}
+.hide{display:none!important}
 .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #cbd6e2;display:grid;grid-template-columns:1fr 1fr;z-index:99;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
 .nav button{border-radius:0;margin:0;padding:18px 8px;font-size:18px}
 .nav .cajaBtn{background:#16844f}
 .sectionTitle{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .badge{background:#16844f;color:#fff;padding:6px 10px;border-radius:999px;font-weight:700}
+.topTabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.topTabs button{padding:12px}
+.loginCard{max-width:520px;margin:30px auto}
+.small{font-size:12px;color:#667085}
+@media(min-width:800px){
+  .nav{display:none}
+  main{padding-bottom:30px}
+}
+@media(max-width:799px){
+  .topTabs{display:none}
+}
+#printArea{display:none}
+@media print{
+  body{background:#fff}
+  header,.nav,.topTabs,#hojas>.card:first-child,#caja,#loginScreen{display:none!important}
+  main{max-width:none;padding:0}
+  #hojas{display:block!important}
+  #hojas>.card:last-child{display:none!important}
+  #printArea{display:block!important}
+}
+.printSheet{font-family:Arial,sans-serif;color:#000;padding:18mm 15mm}
+.printSheet h1{font-size:22px;margin:0 0 14px;text-align:center}
+.printGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
+.printRow{margin-bottom:8px}
+.printLabel{font-weight:700}
+.printFull{grid-column:1/-1}
 </style>
 </head>
 <body>
-<header><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.13 · Hojas de trabajo + Caja</div></header>
+<header>
+  <div class="headerRow">
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.15 · Hojas + Caja + sincronización</div></div>
+    <div id="syncBadge" class="syncBadge">💾 Local</div>
+  </div>
+</header>
 
 <main>
-<section id="hojas">
-<div class="card">
-<div class="sectionTitle"><h2>🔧 HOJA DE TRABAJO</h2><span class="badge">HOJAS</span></div>
-<button class="green" onclick="dictarHojaCompleta()">🎤 DICTAR HOJA ENTERA</button>
-<div id="vozEstado" class="status">Pulsa una vez y dicta todos los datos seguidos.</div>
-<div id="vozLive" class="live">Aquí irán apareciendo las palabras mientras hablas.</div>
-
-<label>Fecha</label><input id="fecha" type="date">
-<label>Cliente</label><div class="field"><input id="cliente"><button class="mic" onclick="dictarCampo('cliente')">🎤</button></div>
-<label>Teléfono</label><div class="field"><input id="telefono" inputmode="numeric"><button class="mic" onclick="dictarCampo('telefono')">🎤</button></div>
-<label>Matrícula</label><div class="field"><input id="matricula"><button class="mic" onclick="dictarCampo('matricula')">🎤</button></div>
-<label>Vehículo</label><div class="field"><input id="vehiculo"><button class="mic" onclick="dictarCampo('vehiculo')">🎤</button></div>
-<label>Kilómetros</label><div class="field"><input id="km" inputmode="numeric"><button class="mic" onclick="dictarCampo('km')">🎤</button></div>
-<label>Dirección</label><div class="field"><input id="direccion"><button class="mic" onclick="dictarCampo('direccion')">🎤</button></div>
-<label>Trabajos a realizar</label><div class="field"><textarea id="trabajo" rows="4"></textarea><button class="mic" onclick="dictarCampo('trabajo')">🎤</button></div>
-<label>Observaciones</label><textarea id="obs" rows="3"></textarea>
-<label>Estado</label><select id="estado"><option>Abierto</option><option>Terminado</option></select>
-<input id="editId" type="hidden">
-<button class="green" style="margin-top:10px" onclick="guardarHoja()">💾 GUARDAR HOJA</button>
+<div id="loginScreen" class="hide">
+  <div class="card loginCard">
+    <h2>🔐 Acceso al taller</h2>
+    <div class="small">Usa la misma cuenta en móvil y ordenador para ver los mismos datos.</div>
+    <label>Correo electrónico</label><input id="loginEmail" type="email">
+    <label>Contraseña</label><input id="loginPass" type="password">
+    <button class="green" style="margin-top:10px" onclick="iniciarSesion()">ENTRAR</button>
+    <button class="light" style="margin-top:8px" onclick="crearCuenta()">CREAR CUENTA</button>
+    <div id="loginEstado" class="status">Introduce correo y contraseña.</div>
+  </div>
 </div>
 
-<div class="card"><h3>Hojas guardadas</h3><div id="lista"></div></div>
-</section>
+<div id="app">
+  <div class="topTabs">
+    <button onclick="mostrar('hojas')">🔧 HOJAS DE TRABAJO</button>
+    <button class="green" onclick="mostrar('caja')">💰 CAJA</button>
+  </div>
 
-<section id="caja" class="hide">
-<div class="card">
-<div class="sectionTitle"><h2>💰 CAJA</h2><span class="badge">CAJA</span></div>
-<div style="font-size:13px;color:#667085">Saldo actual</div>
-<div id="saldo" class="metric">370,00 €</div>
+  <section id="hojas">
+  <div class="card">
+  <div class="sectionTitle"><h2>🔧 HOJA DE TRABAJO</h2><span class="badge">HOJAS</span></div>
+  <button class="green" onclick="dictarHojaCompleta()">🎤 DICTAR HOJA ENTERA</button>
+  <div id="vozEstado" class="status">Pulsa una vez y dicta todos los datos seguidos.</div>
+  <div id="vozLive" class="live">Aquí irán apareciendo las palabras mientras hablas.</div>
 
-<button class="green" style="margin-top:10px" onclick="dictarCaja()">🎤 DICTAR MOVIMIENTO DE CAJA</button>
-<div id="cajaEstado" class="status">Ejemplo: “entrada 70 euros Geni aire acondicionado”.</div>
-<div id="cajaLive" class="live">Aquí irán apareciendo las palabras mientras hablas.</div>
+  <label>Fecha</label><input id="fecha" type="date">
+  <label>Cliente</label><div class="field"><input id="cliente"><button class="mic" onclick="dictarCampo('cliente')">🎤</button></div>
+  <label>Teléfono</label><div class="field"><input id="telefono" inputmode="numeric"><button class="mic" onclick="dictarCampo('telefono')">🎤</button></div>
+  <label>Matrícula</label><div class="field"><input id="matricula"><button class="mic" onclick="dictarCampo('matricula')">🎤</button></div>
+  <label>Vehículo</label><div class="field"><input id="vehiculo"><button class="mic" onclick="dictarCampo('vehiculo')">🎤</button></div>
+  <label>Kilómetros</label><div class="field"><input id="km" inputmode="numeric"><button class="mic" onclick="dictarCampo('km')">🎤</button></div>
+  <label>Dirección</label><div class="field"><input id="direccion"><button class="mic" onclick="dictarCampo('direccion')">🎤</button></div>
+  <label>Trabajos a realizar</label><div class="field"><textarea id="trabajo" rows="4"></textarea><button class="mic" onclick="dictarCampo('trabajo')">🎤</button></div>
+  <label>Observaciones</label><textarea id="obs" rows="3"></textarea>
+  <label>Estado</label><select id="estado"><option>Abierto</option><option>Terminado</option></select>
+  <input id="editId" type="hidden">
+  <button class="green" style="margin-top:10px" onclick="guardarHoja()">💾 GUARDAR HOJA</button>
+  </div>
 
-<label>Fecha</label><input id="cfecha" type="date">
-<label>Tipo</label><select id="tipo"><option value="entrada">Entrada</option><option value="salida">Salida</option></select>
-<label>Importe</label><input id="importe" inputmode="decimal" placeholder="0,00">
-<label>Concepto</label><div class="field"><input id="concepto"><button class="mic" onclick="dictarConcepto()">🎤</button></div>
-<button class="green" style="margin-top:10px" onclick="guardarCaja()">💾 GUARDAR MOVIMIENTO</button>
+  <div class="card"><h3>Hojas guardadas</h3><div id="lista"></div></div>
+  </section>
+
+  <section id="caja" class="hide">
+  <div class="card">
+  <div class="sectionTitle"><h2>💰 CAJA</h2><span class="badge">CAJA</span></div>
+  <div style="font-size:13px;color:#667085">Saldo actual</div>
+  <div id="saldo" class="metric">0,00 €</div>
+
+  <button class="green" style="margin-top:10px" onclick="dictarCaja()">🎤 DICTAR MOVIMIENTO DE CAJA</button>
+  <div id="cajaEstado" class="status">Ejemplo: “entrada 70 euros Geni aire acondicionado”.</div>
+  <div id="cajaLive" class="live">Aquí irán apareciendo las palabras mientras hablas.</div>
+
+  <label>Fecha</label><input id="cfecha" type="date">
+  <label>Tipo</label><select id="tipo"><option value="entrada">Entrada</option><option value="salida">Salida</option></select>
+  <label>Importe</label><input id="importe" inputmode="decimal" placeholder="0,00">
+  <label>Concepto</label><div class="field"><input id="concepto"><button class="mic" onclick="dictarConcepto()">🎤</button></div>
+  <button class="green" style="margin-top:10px" onclick="guardarCaja()">💾 GUARDAR MOVIMIENTO</button>
+  </div>
+
+  <div class="card"><h3>Movimientos de caja</h3><div id="movs"></div></div>
+  </section>
 </div>
-
-<div class="card"><h3>Movimientos de caja</h3><div id="movs"></div></div>
-</section>
 </main>
 
 <nav class="nav">
@@ -101,8 +139,18 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 </nav>
 
 <script>
-const $=x=>document.getElementById(x),KEY='taller_fabi_v013';
-let db=JSON.parse(localStorage.getItem(KEY)||'null')||{caja:370,trabajos:[],mov:[]};
+const $=x=>document.getElementById(x);
+const LOCAL_KEY='taller_fabi_v015';
+
+// ===== CONFIGURACIÓN SUPABASE =====
+// Cuando tengamos el proyecto Supabase, pondremos aquí la URL y la clave pública.
+const SUPABASE_URL='https://ookaoeqpxhhexxbjqnqn.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_Gh97E8o5lvSUMejWPhavqQ_UCray_kd';
+const REMOTE_CONFIGURED = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('PON_AQUI');
+
+let sb=null, user=null;
+let db=JSON.parse(localStorage.getItem(LOCAL_KEY)||'null')||{caja:370,trabajos:[],mov:[]};
+
 const hoy=()=>new Date().toISOString().slice(0,10);
 $('fecha').value=$('cfecha').value=hoy();
 
@@ -112,51 +160,96 @@ function mostrar(sec){
   window.scrollTo(0,0);
   render();
 }
-function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function saveLocal(){localStorage.setItem(LOCAL_KEY,JSON.stringify(db));render()}
 function SR(){return window.SpeechRecognition||window.webkitSpeechRecognition}
+
+async function init(){
+  if(!REMOTE_CONFIGURED){
+    $('syncBadge').textContent='💾 Local';
+    $('loginScreen').classList.add('hide');
+    $('app').classList.remove('hide');
+    render();
+    return;
+  }
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    user=session.user;
+    await cargarRemoto();
+    mostrarApp();
+  }else{
+    $('app').classList.add('hide');
+    $('loginScreen').classList.remove('hide');
+    $('syncBadge').textContent='☁️ Sin sesión';
+  }
+  sb.auth.onAuthStateChange(async (_event,session)=>{
+    if(session){
+      user=session.user;
+      await cargarRemoto();
+      mostrarApp();
+    }
+  });
+}
+function mostrarApp(){
+  $('loginScreen').classList.add('hide');
+  $('app').classList.remove('hide');
+  $('syncBadge').textContent='☁️ Sincronizado';
+  render();
+}
+async function iniciarSesion(){
+  const email=$('loginEmail').value.trim(), password=$('loginPass').value;
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  $('loginEstado').textContent=error?'⚠️ '+error.message:'✅ Acceso correcto.';
+}
+async function crearCuenta(){
+  const email=$('loginEmail').value.trim(), password=$('loginPass').value;
+  const {error}=await sb.auth.signUp({email,password});
+  $('loginEstado').textContent=error?'⚠️ '+error.message:'✅ Cuenta creada. Si Supabase pide confirmar correo, revisa tu email.';
+}
+
+async function cargarRemoto(){
+  if(!sb||!user)return;
+  const [{data:t,error:et},{data:m,error:em}] = await Promise.all([
+    sb.from('trabajos').select('*').order('id',{ascending:false}),
+    sb.from('caja_movimientos').select('*').order('id',{ascending:false})
+  ]);
+  if(et||em){
+    $('syncBadge').textContent='⚠️ Error sincronización';
+    return;
+  }
+  db.trabajos=(t||[]).map(x=>({
+    id:Number(x.id),fecha:x.fecha||'',cliente:x.cliente||'',telefono:x.telefono||'',
+    matricula:x.matricula||'',vehiculo:x.vehiculo||'',km:x.km||'',direccion:x.direccion||'',
+    trabajo:x.trabajo||'',obs:x.obs||'',estado:x.estado||'Abierto'
+  }));
+  db.mov=(m||[]).map(x=>({id:Number(x.id),fecha:x.fecha,tipo:x.tipo,importe:Number(x.importe),concepto:x.concepto}));
+  db.caja=370 + db.mov.reduce((a,x)=>a+(x.tipo==='entrada'?x.importe:-x.importe),0);
+  saveLocal();
+}
 
 function escucharConTexto(finalCb, estadoId, liveId, continuo=true){
   const C=SR();
   if(!C){$(estadoId).textContent='⚠️ Usa Chrome en Android y abre la web mediante HTTPS.';return}
-  const r=new C();
-  r.lang='es-ES';
-  r.continuous=continuo;
-  r.interimResults=true;
+  const r=new C(); r.lang='es-ES'; r.continuous=continuo; r.interimResults=true;
   let finalText='';
-  $(estadoId).textContent='🔴 ESCUCHANDO… habla ahora';
-  $(liveId).textContent='';
+  $(estadoId).textContent='🔴 ESCUCHANDO… habla ahora'; $(liveId).textContent='';
   r.onresult=e=>{
     let provisional='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       const txt=e.results[i][0].transcript;
-      if(e.results[i].isFinal) finalText += txt+' ';
-      else provisional += txt;
+      if(e.results[i].isFinal) finalText += txt+' '; else provisional += txt;
     }
     $(liveId).textContent=(finalText+provisional).trim() || 'Escuchando…';
   };
-  r.onerror=e=>{
-    $(estadoId).textContent=e.error==='not-allowed'
-      ?'⛔ Micrófono bloqueado. Actívalo en los permisos del sitio.'
-      :'⚠️ Error de voz: '+e.error;
-  };
-  r.onend=()=>{
-    const t=finalText.trim();
-    if(t){
-      $(liveId).textContent=t;
-      finalCb(t);
-    } else if(!$(estadoId).textContent.includes('⛔')&&!$(estadoId).textContent.includes('⚠️')){
-      $(estadoId).textContent='⚠️ No he recibido texto. Prueba otra vez.';
-    }
-  };
+  r.onerror=e=>{$(estadoId).textContent=e.error==='not-allowed'?'⛔ Micrófono bloqueado. Actívalo en los permisos del sitio.':'⚠️ Error de voz: '+e.error};
+  r.onend=()=>{const t=finalText.trim(); if(t){$(liveId).textContent=t;finalCb(t)} else if(!$(estadoId).textContent.includes('⛔')&&!$(estadoId).textContent.includes('⚠️')) $(estadoId).textContent='⚠️ No he recibido texto. Prueba otra vez.'};
   try{r.start()}catch(e){$(estadoId).textContent='⚠️ No se pudo iniciar el micrófono.'}
 }
-
 const dig={cero:'0',un:'1',uno:'1',una:'1',dos:'2',tres:'3',cuatro:'4',cinco:'5',seis:'6',siete:'7',ocho:'8',nueve:'9'};
 function aDigitos(s){
   const a=s.toLowerCase().replace(/[.,-]/g,' ').trim().split(/\s+/);
   if(a.every(x=>dig[x]!=null||/^\d+$/.test(x))) return a.map(x=>dig[x]??x).join('');
-  const nums=s.replace(/\D/g,'');
-  return nums||s;
+  const nums=s.replace(/\D/g,''); return nums||s;
 }
 function extraer(t,label,next){
   const fin=next.length?'(?=\\s+(?:'+next.join('|')+')\\b|$)':'$';
@@ -164,16 +257,10 @@ function extraer(t,label,next){
   return m?m[1].trim():'';
 }
 const defs=[
- ['cliente','cliente'],
- ['telefono','tel[eé]fono'],
- ['matricula','matr[ií]cula'],
- ['vehiculo','veh[ií]culo|coche'],
- ['km','kil[oó]metros|kilometraje|km'],
- ['direccion','direcci[oó]n'],
- ['trabajo','trabajo|trabajos|reparaci[oó]n'],
- ['obs','observaciones']
+ ['cliente','cliente'],['telefono','tel[eé]fono'],['matricula','matr[ií]cula'],
+ ['vehiculo','veh[ií]culo|coche'],['km','kil[oó]metros|kilometraje|km'],
+ ['direccion','direcci[oó]n'],['trabajo','trabajo|trabajos|reparaci[oó]n'],['obs','observaciones']
 ];
-
 function dictarHojaCompleta(){
   escucharConTexto(t=>{
     let n=0;
@@ -188,12 +275,10 @@ function dictarHojaCompleta(){
   },'vozEstado','vozLive',true);
 }
 function dictarCampo(id){
-  escucharConTexto(t=>{
-    $(id).value=(id==='telefono'||id==='km')?aDigitos(t):id==='matricula'?t.toUpperCase():t;
-    $('vozEstado').textContent='✅ Campo rellenado.';
-  },'vozEstado','vozLive',false);
+  escucharConTexto(t=>{$(id).value=(id==='telefono'||id==='km')?aDigitos(t):id==='matricula'?t.toUpperCase():t;$('vozEstado').textContent='✅ Campo rellenado.'},'vozEstado','vozLive',false);
 }
-function guardarHoja(){
+
+async function guardarHoja(){
   const id=$('editId').value?+$('editId').value:Date.now();
   const x={id,fecha:$('fecha').value,cliente:$('cliente').value||'Cliente pendiente',
     telefono:$('telefono').value,matricula:$('matricula').value.toUpperCase(),
@@ -202,22 +287,43 @@ function guardarHoja(){
   const p=db.trabajos.findIndex(a=>a.id===id);
   p>=0?db.trabajos[p]=x:db.trabajos.unshift(x);
   $('editId').value='';
-  save();
-  $('vozEstado').textContent='✅ Hoja guardada.';
+
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('trabajos').upsert({...x,user_id:user.id});
+    if(error){$('vozEstado').textContent='⚠️ Guardado local, error al sincronizar: '+error.message;saveLocal();return}
+    $('vozEstado').textContent='✅ Hoja guardada y sincronizada.';
+  }else $('vozEstado').textContent='✅ Hoja guardada en este dispositivo.';
+  saveLocal();
 }
 function editar(id){
   const x=db.trabajos.find(a=>a.id===id); if(!x)return;
   $('editId').value=x.id;
   ['fecha','cliente','telefono','matricula','vehiculo','km','direccion','trabajo','obs','estado'].forEach(k=>$(k).value=x[k]||'');
-  mostrar('hojas');
-  $('vozEstado').textContent='✏️ Modifica lo necesario y pulsa GUARDAR HOJA.';
+  mostrar('hojas'); $('vozEstado').textContent='✏️ Modifica lo necesario y pulsa GUARDAR HOJA.';
+}
+function imprimirHoja(id){
+  const x=db.trabajos.find(a=>a.id===id); if(!x)return;
+  let area=$('printArea');
+  if(!area){area=document.createElement('div');area.id='printArea';document.body.appendChild(area)}
+  area.innerHTML=`<div class="printSheet"><h1>HOJA DE TRABAJO · TALLER FABI DOMÍNGUEZ</h1><div class="printGrid">
+  <div class="printRow"><span class="printLabel">Fecha:</span> ${x.fecha||''}</div>
+  <div class="printRow"><span class="printLabel">Estado:</span> ${x.estado||''}</div>
+  <div class="printRow"><span class="printLabel">Cliente:</span> ${x.cliente||''}</div>
+  <div class="printRow"><span class="printLabel">Teléfono:</span> ${x.telefono||''}</div>
+  <div class="printRow"><span class="printLabel">Matrícula:</span> ${x.matricula||''}</div>
+  <div class="printRow"><span class="printLabel">Vehículo:</span> ${x.vehiculo||''}</div>
+  <div class="printRow"><span class="printLabel">Kilómetros:</span> ${x.km||''}</div>
+  <div class="printRow"><span class="printLabel">Dirección:</span> ${x.direccion||''}</div>
+  <div class="printRow printFull"><span class="printLabel">Trabajos a realizar:</span><br>${(x.trabajo||'').replace(/\n/g,'<br>')}</div>
+  <div class="printRow printFull"><span class="printLabel">Observaciones:</span><br>${(x.obs||'').replace(/\n/g,'<br>')}</div>
+  </div></div>`;
+  setTimeout(()=>window.print(),50);
 }
 
 function dictarCaja(){
   escucharConTexto(t=>{
     $('tipo').value=/salida|gasto|pago/i.test(t)?'salida':'entrada';
-    const m=t.match(/(\d+(?:[,.]\d+)?)/);
-    if(m)$('importe').value=m[1];
+    const m=t.match(/(\d+(?:[,.]\d+)?)/); if(m)$('importe').value=m[1];
     $('concepto').value=t.replace(/entrada|salida|gasto|pago/ig,'').replace(/\d+(?:[,.]\d+)?\s*(euros?|€)?/i,'').trim();
     $('cajaEstado').textContent='✅ Movimiento dictado. Revisa y pulsa GUARDAR MOVIMIENTO.';
   },'cajaEstado','cajaLive',true);
@@ -225,48 +331,27 @@ function dictarCaja(){
 function dictarConcepto(){
   escucharConTexto(t=>{$('concepto').value=t;$('cajaEstado').textContent='✅ Concepto rellenado.'},'cajaEstado','cajaLive',false);
 }
-function guardarCaja(){
+async function guardarCaja(){
   const v=parseFloat(($('importe').value||'').replace(',','.'))||0;
   if(!v){$('cajaEstado').textContent='⚠️ Falta el importe.';return}
-  $('tipo').value==='entrada'?db.caja+=v:db.caja-=v;
-  db.mov.unshift({fecha:$('cfecha').value,tipo:$('tipo').value,importe:v,concepto:$('concepto').value||'Sin concepto'});
+  const x={id:Date.now(),fecha:$('cfecha').value,tipo:$('tipo').value,importe:v,concepto:$('concepto').value||'Sin concepto'};
+  db.mov.unshift(x);
+  db.caja += x.tipo==='entrada'?v:-v;
+
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('caja_movimientos').insert({...x,user_id:user.id});
+    if(error){$('cajaEstado').textContent='⚠️ Guardado local, error al sincronizar: '+error.message;saveLocal();return}
+    $('cajaEstado').textContent='✅ Movimiento guardado y sincronizado.';
+  }else $('cajaEstado').textContent='✅ Movimiento guardado en este dispositivo.';
   $('importe').value='';$('concepto').value='';$('cfecha').value=hoy();
-  save();$('cajaEstado').textContent='✅ Movimiento guardado.';
+  saveLocal();
 }
 function render(){
   $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   $('lista').innerHTML=db.trabajos.length?db.trabajos.map(x=>`<div class="item"><b>${x.fecha} · ${x.cliente}</b><div>${x.matricula||''} · ${x.vehiculo||''}</div><div>${x.trabajo}</div><div class="actions"><button onclick="editar(${x.id})">✏️ MODIFICAR</button><button onclick="imprimirHoja(${x.id})">🖨️ IMPRIMIR</button></div><div style="margin-top:6px"><button class="light">${x.estado}</button></div></div>`).join(''):'<div>Sin hojas guardadas.</div>';
-  $('movs').innerHTML=db.mov.length?db.mov.map(x=>`<div class="item"><b>${x.fecha} · ${x.tipo==='entrada'?'➕':'➖'} ${x.importe.toFixed(2)} €</b><div>${x.concepto}</div></div>`).join(''):'<div>Sin movimientos.</div>';
+  $('movs').innerHTML=db.mov.length?db.mov.map(x=>`<div class="item"><b>${x.fecha} · ${x.tipo==='entrada'?'➕':'➖'} ${Number(x.importe).toFixed(2)} €</b><div>${x.concepto}</div></div>`).join(''):'<div>Sin movimientos.</div>';
 }
-
-function imprimirHoja(id){
-  const x=db.trabajos.find(a=>a.id===id); if(!x)return;
-  let area=$('printArea');
-  if(!area){
-    area=document.createElement('div');
-    area.id='printArea';
-    document.body.appendChild(area);
-  }
-  area.innerHTML=`
-    <div class="printSheet">
-      <h1>HOJA DE TRABAJO · TALLER FABI DOMÍNGUEZ</h1>
-      <div class="printGrid">
-        <div class="printRow"><span class="printLabel">Fecha:</span> ${x.fecha||''}</div>
-        <div class="printRow"><span class="printLabel">Estado:</span> ${x.estado||''}</div>
-        <div class="printRow"><span class="printLabel">Cliente:</span> ${x.cliente||''}</div>
-        <div class="printRow"><span class="printLabel">Teléfono:</span> ${x.telefono||''}</div>
-        <div class="printRow"><span class="printLabel">Matrícula:</span> ${x.matricula||''}</div>
-        <div class="printRow"><span class="printLabel">Vehículo:</span> ${x.vehiculo||''}</div>
-        <div class="printRow"><span class="printLabel">Kilómetros:</span> ${x.km||''}</div>
-        <div class="printRow"><span class="printLabel">Dirección:</span> ${x.direccion||''}</div>
-        <div class="printRow printFull"><span class="printLabel">Trabajos a realizar:</span><br>${(x.trabajo||'').replace(/\n/g,'<br>')}</div>
-        <div class="printRow printFull"><span class="printLabel">Observaciones:</span><br>${(x.obs||'').replace(/\n/g,'<br>')}</div>
-      </div>
-    </div>`;
-  setTimeout(()=>window.print(),50);
-}
-
-render();
+init();
 </script>
 </body>
 </html>
