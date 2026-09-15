@@ -63,7 +63,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.15 · Hojas + Caja + sincronización</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.16 · Hojas + Caja + sincronización</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -246,10 +246,36 @@ function escucharConTexto(finalCb, estadoId, liveId, continuo=true){
   try{r.start()}catch(e){$(estadoId).textContent='⚠️ No se pudo iniciar el micrófono.'}
 }
 const dig={cero:'0',un:'1',uno:'1',una:'1',dos:'2',tres:'3',cuatro:'4',cinco:'5',seis:'6',siete:'7',ocho:'8',nueve:'9'};
+const unidades={cero:0,un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,veintidos:22,veintitres:23,veinticuatro:24,veinticinco:25,veintiseis:26,veintisiete:27,veintiocho:28,veintinueve:29};
+const decenas={treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90};
+const centenas={cien:100,ciento:100,doscientos:200,doscientas:200,trescientos:300,trescientas:300,cuatrocientos:400,cuatrocientas:400,quinientos:500,quinientas:500,seiscientos:600,seiscientas:600,setecientos:700,setecientas:700,ochocientos:800,ochocientas:800,novecientos:900,novecientas:900};
+function normalizaNumero(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/€/g,' euros ').replace(/[^a-z0-9,.-]+/g,' ').trim()}
+function palabrasANumero(s){
+  let z=normalizaNumero(s).replace(/\beuros?\b/g,'').trim();
+  const directo=z.match(/^[-+]?\d+(?:[,.]\d+)?$/); if(directo)return Number(z.replace(',','.'));
+  const toks=z.replace(/-/g,' ').split(/\s+/).filter(Boolean); let total=0,grupo=0,vio=false;
+  for(const w of toks){
+    if(w==='y'){continue}
+    if(unidades[w]!=null){grupo+=unidades[w];vio=true;continue}
+    if(decenas[w]!=null){grupo+=decenas[w];vio=true;continue}
+    if(centenas[w]!=null){grupo+=centenas[w];vio=true;continue}
+    if(w==='mil'){total+=(grupo||1)*1000;grupo=0;vio=true;continue}
+    if(w==='millon'||w==='millones'){total=(total+grupo||1)*1000000;grupo=0;vio=true;continue}
+  }
+  return vio?total+grupo:null;
+}
 function aDigitos(s){
-  const a=s.toLowerCase().replace(/[.,-]/g,' ').trim().split(/\s+/);
-  if(a.every(x=>dig[x]!=null||/^\d+$/.test(x))) return a.map(x=>dig[x]??x).join('');
+  const a=normalizaNumero(s).split(/\s+/).filter(Boolean);
+  if(a.length && a.every(x=>dig[x]!=null||/^\d+$/.test(x))) return a.map(x=>dig[x]??x).join('');
+  const n=palabrasANumero(s); if(n!=null)return String(n);
   const nums=s.replace(/\D/g,''); return nums||s;
+}
+function extraerImporteVoz(t){
+  const m=t.match(/\d+(?:[,.]\d+)?/); if(m)return {valor:Number(m[0].replace(',','.')),texto:m[0]};
+  const limpio=normalizaNumero(t).replace(/\b(entrada|salida|gasto|pago|euros?|de|por)\b/g,' ').replace(/\s+/g,' ').trim();
+  const palabras=limpio.split(' '); let usadas=[];
+  for(const w of palabras){if(w==='y'||unidades[w]!=null||decenas[w]!=null||centenas[w]!=null||w==='mil'||w==='millon'||w==='millones')usadas.push(w);else if(usadas.length)break}
+  const texto=usadas.join(' '), valor=palabrasANumero(texto); return valor!=null?{valor,texto}:null;
 }
 function extraer(t,label,next){
   const fin=next.length?'(?=\\s+(?:'+next.join('|')+')\\b|$)':'$';
@@ -323,9 +349,12 @@ function imprimirHoja(id){
 function dictarCaja(){
   escucharConTexto(t=>{
     $('tipo').value=/salida|gasto|pago/i.test(t)?'salida':'entrada';
-    const m=t.match(/(\d+(?:[,.]\d+)?)/); if(m)$('importe').value=m[1];
-    $('concepto').value=t.replace(/entrada|salida|gasto|pago/ig,'').replace(/\d+(?:[,.]\d+)?\s*(euros?|€)?/i,'').trim();
-    $('cajaEstado').textContent='✅ Movimiento dictado. Revisa y pulsa GUARDAR MOVIMIENTO.';
+    const imp=extraerImporteVoz(t); if(imp)$('importe').value=String(imp.valor).replace('.',',');
+    let concepto=t.replace(/entrada|salida|gasto|pago/ig,'');
+    if(imp){concepto=concepto.replace(imp.texto,'')}
+    concepto=concepto.replace(/\s*(euros?|€)\s*/i,' ').replace(/\s+/g,' ').trim();
+    $('concepto').value=concepto;
+    $('cajaEstado').textContent=imp?'✅ Movimiento dictado. Revisa y pulsa GUARDAR MOVIMIENTO.':'⚠️ No he entendido el importe. Puedes escribirlo a mano.';
   },'cajaEstado','cajaLive',true);
 }
 function dictarConcepto(){
@@ -346,10 +375,33 @@ async function guardarCaja(){
   $('importe').value='';$('concepto').value='';$('cfecha').value=hoy();
   saveLocal();
 }
+
+async function eliminarHoja(id){
+  const x=db.trabajos.find(a=>a.id===id); if(!x)return;
+  if(!confirm('¿Seguro que quieres borrar esta hoja de trabajo?'))return;
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('trabajos').delete().eq('id',id);
+    if(error){$('vozEstado').textContent='⚠️ No se pudo borrar: '+error.message;return}
+  }
+  db.trabajos=db.trabajos.filter(a=>a.id!==id); saveLocal();
+  $('vozEstado').textContent='🗑️ Hoja borrada y sincronizada.';
+}
+async function eliminarCaja(id){
+  const x=db.mov.find(a=>a.id===id); if(!x)return;
+  if(!confirm('¿Seguro que quieres borrar este movimiento de caja?'))return;
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('caja_movimientos').delete().eq('id',id);
+    if(error){$('cajaEstado').textContent='⚠️ No se pudo borrar: '+error.message;return}
+  }
+  db.mov=db.mov.filter(a=>a.id!==id);
+  db.caja=370 + db.mov.reduce((a,m)=>a+(m.tipo==='entrada'?Number(m.importe):-Number(m.importe)),0);
+  saveLocal(); $('cajaEstado').textContent='🗑️ Movimiento borrado y sincronizado.';
+}
+
 function render(){
   $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
-  $('lista').innerHTML=db.trabajos.length?db.trabajos.map(x=>`<div class="item"><b>${x.fecha} · ${x.cliente}</b><div>${x.matricula||''} · ${x.vehiculo||''}</div><div>${x.trabajo}</div><div class="actions"><button onclick="editar(${x.id})">✏️ MODIFICAR</button><button onclick="imprimirHoja(${x.id})">🖨️ IMPRIMIR</button></div><div style="margin-top:6px"><button class="light">${x.estado}</button></div></div>`).join(''):'<div>Sin hojas guardadas.</div>';
-  $('movs').innerHTML=db.mov.length?db.mov.map(x=>`<div class="item"><b>${x.fecha} · ${x.tipo==='entrada'?'➕':'➖'} ${Number(x.importe).toFixed(2)} €</b><div>${x.concepto}</div></div>`).join(''):'<div>Sin movimientos.</div>';
+  $('lista').innerHTML=db.trabajos.length?db.trabajos.map(x=>`<div class="item"><b>${x.fecha} · ${x.cliente}</b><div>${x.matricula||''} · ${x.vehiculo||''}</div><div>${x.trabajo}</div><div class="actions"><button onclick="editar(${x.id})">✏️ MODIFICAR</button><button onclick="imprimirHoja(${x.id})">🖨️ IMPRIMIR</button><button class="light" onclick="eliminarHoja(${x.id})">🗑️ BORRAR</button></div><div style="margin-top:6px"><button class="light">${x.estado}</button></div></div>`).join(''):'<div>Sin hojas guardadas.</div>';
+  $('movs').innerHTML=db.mov.length?db.mov.map(x=>`<div class="item"><b>${x.fecha} · ${x.tipo==='entrada'?'➕':'➖'} ${Number(x.importe).toFixed(2)} €</b><div>${x.concepto}</div><div class="actions"><button class="light" onclick="eliminarCaja(${x.id})">🗑️ BORRAR</button></div></div>`).join(''):'<div>Sin movimientos.</div>';
 }
 init();
 </script>
