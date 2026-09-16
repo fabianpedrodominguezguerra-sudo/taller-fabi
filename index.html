@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.17</title>
+<title>Taller Fabi v0.18</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -63,7 +63,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.17 · Hojas + Caja + sincronización</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.18 · Hojas + Caja + sincronización</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -232,13 +232,12 @@ function escucharConTexto(finalCb,estadoId,liveId,continuo=true){
  const C=SR();if(!C){$(estadoId).textContent='⚠️ Usa Chrome en Android y abre la web mediante HTTPS.';return}
  if(reconocimientoActivo){$(estadoId).textContent='🎤 Ya estoy escuchando. Espera a que termine.';return}
  const r=new C();reconocimientoActivo=r;r.lang='es-ES';r.continuous=continuo;r.interimResults=true;
- let finalText='',ultimoFinal='',procesado=false,timer=null;
- const parar=()=>{clearTimeout(timer);timer=setTimeout(()=>{try{r.stop()}catch(e){}},continuo?1600:900)};
+ let finalText='',ultimoFinal='',procesado=false;
  $(estadoId).textContent='🔴 ESCUCHANDO… habla ahora';$(liveId).textContent='';
- r.onresult=e=>{let provisional='';for(let i=e.resultIndex;i<e.results.length;i++){let x=(e.results[i][0].transcript||'').trim();if(!x)continue;if(e.results[i].isFinal){if(x!==ultimoFinal){finalText+=(finalText?' ':'')+x;ultimoFinal=x}}else provisional+=(provisional?' ':'')+x}$(liveId).textContent=(finalText+' '+provisional).trim()||'Escuchando…';parar()};
+ r.onresult=e=>{let provisional='';for(let i=e.resultIndex;i<e.results.length;i++){let x=(e.results[i][0].transcript||'').trim();if(!x)continue;if(e.results[i].isFinal){if(x!==ultimoFinal){finalText+=(finalText?' ':'')+x;ultimoFinal=x}}else provisional+=(provisional?' ':'')+x}$(liveId).textContent=(finalText+' '+provisional).trim()||'Escuchando…'};
  r.onerror=e=>{$(estadoId).textContent=e.error==='not-allowed'?'⛔ Micrófono bloqueado. Actívalo en los permisos del sitio.':'⚠️ Error de voz: '+e.error};
- r.onend=()=>{clearTimeout(timer);reconocimientoActivo=null;if(procesado)return;procesado=true;const t=finalText.trim();if(t){$(liveId).textContent=t;finalCb(t)}else if(!$(estadoId).textContent.includes('⛔')&&!$(estadoId).textContent.includes('⚠️'))$(estadoId).textContent='⚠️ No he recibido texto. Prueba otra vez.'};
- try{r.start();parar()}catch(e){reconocimientoActivo=null;$(estadoId).textContent='⚠️ No se pudo iniciar el micrófono.'}
+ r.onend=()=>{reconocimientoActivo=null;if(procesado)return;procesado=true;const t=finalText.trim();if(t){$(liveId).textContent=t;finalCb(t)}else if(!$(estadoId).textContent.includes('⛔')&&!$(estadoId).textContent.includes('⚠️'))$(estadoId).textContent='⚠️ No he recibido texto. Prueba otra vez.'};
+ try{r.start()}catch(e){reconocimientoActivo=null;$(estadoId).textContent='⚠️ No se pudo iniciar el micrófono.'}
 }
 
 const dig={cero:'0',un:'1',uno:'1',una:'1',dos:'2',tres:'3',cuatro:'4',cinco:'5',seis:'6',siete:'7',ocho:'8',nueve:'9'};
