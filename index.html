@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.15</title>
+<title>Taller Fabi v0.17</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -63,7 +63,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.16 · Hojas + Caja + sincronización</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.17 · Hojas + Caja + sincronización</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -227,24 +227,20 @@ async function cargarRemoto(){
   saveLocal();
 }
 
-function escucharConTexto(finalCb, estadoId, liveId, continuo=true){
-  const C=SR();
-  if(!C){$(estadoId).textContent='⚠️ Usa Chrome en Android y abre la web mediante HTTPS.';return}
-  const r=new C(); r.lang='es-ES'; r.continuous=continuo; r.interimResults=true;
-  let finalText='';
-  $(estadoId).textContent='🔴 ESCUCHANDO… habla ahora'; $(liveId).textContent='';
-  r.onresult=e=>{
-    let provisional='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const txt=e.results[i][0].transcript;
-      if(e.results[i].isFinal) finalText += txt+' '; else provisional += txt;
-    }
-    $(liveId).textContent=(finalText+provisional).trim() || 'Escuchando…';
-  };
-  r.onerror=e=>{$(estadoId).textContent=e.error==='not-allowed'?'⛔ Micrófono bloqueado. Actívalo en los permisos del sitio.':'⚠️ Error de voz: '+e.error};
-  r.onend=()=>{const t=finalText.trim(); if(t){$(liveId).textContent=t;finalCb(t)} else if(!$(estadoId).textContent.includes('⛔')&&!$(estadoId).textContent.includes('⚠️')) $(estadoId).textContent='⚠️ No he recibido texto. Prueba otra vez.'};
-  try{r.start()}catch(e){$(estadoId).textContent='⚠️ No se pudo iniciar el micrófono.'}
+let reconocimientoActivo=null;
+function escucharConTexto(finalCb,estadoId,liveId,continuo=true){
+ const C=SR();if(!C){$(estadoId).textContent='⚠️ Usa Chrome en Android y abre la web mediante HTTPS.';return}
+ if(reconocimientoActivo){$(estadoId).textContent='🎤 Ya estoy escuchando. Espera a que termine.';return}
+ const r=new C();reconocimientoActivo=r;r.lang='es-ES';r.continuous=continuo;r.interimResults=true;
+ let finalText='',ultimoFinal='',procesado=false,timer=null;
+ const parar=()=>{clearTimeout(timer);timer=setTimeout(()=>{try{r.stop()}catch(e){}},continuo?1600:900)};
+ $(estadoId).textContent='🔴 ESCUCHANDO… habla ahora';$(liveId).textContent='';
+ r.onresult=e=>{let provisional='';for(let i=e.resultIndex;i<e.results.length;i++){let x=(e.results[i][0].transcript||'').trim();if(!x)continue;if(e.results[i].isFinal){if(x!==ultimoFinal){finalText+=(finalText?' ':'')+x;ultimoFinal=x}}else provisional+=(provisional?' ':'')+x}$(liveId).textContent=(finalText+' '+provisional).trim()||'Escuchando…';parar()};
+ r.onerror=e=>{$(estadoId).textContent=e.error==='not-allowed'?'⛔ Micrófono bloqueado. Actívalo en los permisos del sitio.':'⚠️ Error de voz: '+e.error};
+ r.onend=()=>{clearTimeout(timer);reconocimientoActivo=null;if(procesado)return;procesado=true;const t=finalText.trim();if(t){$(liveId).textContent=t;finalCb(t)}else if(!$(estadoId).textContent.includes('⛔')&&!$(estadoId).textContent.includes('⚠️'))$(estadoId).textContent='⚠️ No he recibido texto. Prueba otra vez.'};
+ try{r.start();parar()}catch(e){reconocimientoActivo=null;$(estadoId).textContent='⚠️ No se pudo iniciar el micrófono.'}
 }
+
 const dig={cero:'0',un:'1',uno:'1',una:'1',dos:'2',tres:'3',cuatro:'4',cinco:'5',seis:'6',siete:'7',ocho:'8',nueve:'9'};
 const unidades={cero:0,un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,veintidos:22,veintitres:23,veinticuatro:24,veinticinco:25,veintiseis:26,veintisiete:27,veintiocho:28,veintinueve:29};
 const decenas={treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90};
@@ -270,6 +266,13 @@ function aDigitos(s){
   const n=palabrasANumero(s); if(n!=null)return String(n);
   const nums=s.replace(/\D/g,''); return nums||s;
 }
+function normalizaMatricula(s){
+ let z=(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[.,;:!?-]+/g,' ');
+ const toks=z.split(/\s+/).filter(Boolean),out=[];
+ for(const x of toks){if(dig[x]!=null)out.push(dig[x]);else if(/^\d+$/.test(x))out.push(x);else if(/^[a-zñ0-9]+$/.test(x))out.push(x.toUpperCase())}
+ return out.join('').replace(/[^A-ZÑ0-9]/g,'');
+}
+
 function extraerImporteVoz(t){
   const m=t.match(/\d+(?:[,.]\d+)?/); if(m)return {valor:Number(m[0].replace(',','.')),texto:m[0]};
   const limpio=normalizaNumero(t).replace(/\b(entrada|salida|gasto|pago|euros?|de|por)\b/g,' ').replace(/\s+/g,' ').trim();
@@ -294,20 +297,20 @@ function dictarHojaCompleta(){
       let v=extraer(t,d[1],defs.slice(i+1).map(x=>x[1]));
       if(!v)return;
       if(d[0]==='telefono'||d[0]==='km')v=aDigitos(v);
-      if(d[0]==='matricula')v=v.toUpperCase();
+      if(d[0]==='matricula')v=normalizaMatricula(v);
       $(d[0]).value=v; n++;
     });
     $('vozEstado').textContent='✅ Dictado terminado: '+n+' campos rellenados. Revisa y pulsa GUARDAR HOJA.';
   },'vozEstado','vozLive',true);
 }
 function dictarCampo(id){
-  escucharConTexto(t=>{$(id).value=(id==='telefono'||id==='km')?aDigitos(t):id==='matricula'?t.toUpperCase():t;$('vozEstado').textContent='✅ Campo rellenado.'},'vozEstado','vozLive',false);
+  escucharConTexto(t=>{$(id).value=(id==='telefono'||id==='km')?aDigitos(t):id==='matricula'?normalizaMatricula(t):t;$('vozEstado').textContent='✅ Campo rellenado.'},'vozEstado','vozLive',false);
 }
 
 async function guardarHoja(){
   const id=$('editId').value?+$('editId').value:Date.now();
   const x={id,fecha:$('fecha').value,cliente:$('cliente').value||'Cliente pendiente',
-    telefono:$('telefono').value,matricula:$('matricula').value.toUpperCase(),
+    telefono:$('telefono').value,matricula:normalizaMatricula($('matricula').value),
     vehiculo:$('vehiculo').value,km:$('km').value,direccion:$('direccion').value,
     trabajo:$('trabajo').value||'Trabajo pendiente',obs:$('obs').value,estado:$('estado').value};
   const p=db.trabajos.findIndex(a=>a.id===id);
