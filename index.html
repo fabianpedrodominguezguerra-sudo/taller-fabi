@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.23</title>
+<title>Taller Fabi v0.24</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -79,7 +79,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.23 · Prioridades con colores</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.24 · Prioridades corregidas</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -451,7 +451,7 @@ function render(){
   $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   const abiertas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   $('numAbiertas').textContent=abiertas.length;
-  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>{const p=prioridadDe(x);return `<div class="trabajoAbierto prio-${p}"><div class="fechaEntrada">📅 Entrada: ${escHtml(x.fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula)}${x.matricula&&x.vehiculo?' · ':''}${escHtml(x.vehiculo)}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div><div class="prioridadLinea">Prioridad: <select class="prio-${p}" onchange="cambiarPrioridad(${x.id},this.value)"><option ${p==='Alta'?'selected':''}>🔴 Alta</option><option ${p==='Normal'?'selected':''}>🟡 Normal</option><option ${p==='Baja'?'selected':''}>🟢 Baja</option></select></div></div>`}).join(''):'<div>✅ No hay hojas abiertas.</div>';
+  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>{const p=prioridadDe(x);return `<div class="trabajoAbierto prio-${p}"><div class="fechaEntrada">📅 Entrada: ${escHtml(x.fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula)}${x.matricula&&x.vehiculo?' · ':''}${escHtml(x.vehiculo)}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div><div class="prioridadLinea">Prioridad: <select class="prio-${p}" onchange="cambiarPrioridad(${x.id},this.value)"><option value="Alta" ${p==='Alta'?'selected':''}>🔴 Alta</option><option value="Normal" ${p==='Normal'?'selected':''}>🟡 Normal</option><option value="Baja" ${p==='Baja'?'selected':''}>🟢 Baja</option></select></div></div>`}).join(''):'<div>✅ No hay hojas abiertas.</div>';
   const cm=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   $('resumenCajaMes').innerHTML=`Entradas: ${dinero(cm.entradas)} · Salidas: ${dinero(cm.salidas)} · Resultado: ${dinero(cm.resultado)}`;
   $('listaCajaMes').innerHTML=cm.a.length?cm.a.map(x=>`<div class="listadoFila"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'➕':'➖'} ${dinero(x.importe)}</b><div>${escHtml(x.concepto)}</div></div>`).join(''):'<div>Sin movimientos en este mes.</div>';
