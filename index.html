@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.21</title>
+<title>Taller Fabi v0.22</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -42,6 +42,9 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 .trabajoAbierto .clienteAbierto{font-weight:800;margin-bottom:5px}
 .trabajoAbierto .vehiculoAbierto{font-size:14px;margin-bottom:7px}
 .trabajoAbierto .trabajoTexto{font-size:14px;line-height:1.35}
+.prioridadLinea{margin-top:9px;padding-top:8px;border-top:1px solid #dce5ef;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700}
+.prioridadLinea select{width:auto;min-width:105px;padding:5px 7px;margin:0;font-weight:700}
+
 @media(max-width:799px) and (min-width:520px){#listaAbiertas{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:519px){#listaAbiertas{grid-template-columns:1fr}}
 
@@ -69,7 +72,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.21 · Hojas abiertas organizadas por fecha</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.22 · Hojas abiertas + prioridad</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -110,6 +113,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
   <label>Trabajos a realizar</label><div class="field"><textarea id="trabajo" rows="4"></textarea><button class="mic" onclick="dictarCampo('trabajo')">🎤</button></div>
   <label>Observaciones</label><textarea id="obs" rows="3"></textarea>
   <label>Estado</label><select id="estado"><option>Abierto</option><option>Terminado</option></select>
+  <label>Prioridad</label><select id="prioridad"><option>Normal</option><option>Alta</option><option>Baja</option></select>
   <input id="editId" type="hidden">
   <button class="green" style="margin-top:10px" onclick="guardarHoja()">💾 GUARDAR HOJA</button>
   </div>
@@ -315,12 +319,30 @@ function dictarCampo(id){
   escucharConTexto(t=>{$(id).value=(id==='telefono'||id==='km')?aDigitos(t):id==='matricula'?normalizaMatricula(t):t;$('vozEstado').textContent='✅ Campo rellenado.'},'vozEstado','vozLive',false);
 }
 
+function prioridadDe(x){
+  const m=String(x?.obs||'').match(/\[\[PRIORIDAD:(Alta|Normal|Baja)\]\]/i);
+  if(!m)return 'Normal';
+  return m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase();
+}
+function obsLimpias(obs){return String(obs||'').replace(/\s*\[\[PRIORIDAD:(Alta|Normal|Baja)\]\]\s*/ig,'').trim()}
+function obsConPrioridad(obs,p){return (obsLimpias(obs)+(obsLimpias(obs)?'\n':'')+'[[PRIORIDAD:'+(p||'Normal')+']]').trim()}
+async function cambiarPrioridad(id,p){
+  const x=db.trabajos.find(a=>a.id===id); if(!x)return;
+  x.obs=obsConPrioridad(x.obs,p);
+  saveLocal();
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('trabajos').upsert({...x,user_id:user.id});
+    if(error){$('vozEstado').textContent='⚠️ Prioridad guardada localmente, error al sincronizar: '+error.message;return}
+    $('vozEstado').textContent='✅ Prioridad '+p+' guardada y sincronizada.';
+  }
+}
+
 async function guardarHoja(){
   const id=$('editId').value?+$('editId').value:Date.now();
   const x={id,fecha:$('fecha').value,cliente:$('cliente').value||'Cliente pendiente',
     telefono:$('telefono').value,matricula:normalizaMatricula($('matricula').value),
     vehiculo:$('vehiculo').value,km:$('km').value,direccion:$('direccion').value,
-    trabajo:$('trabajo').value||'Trabajo pendiente',obs:$('obs').value,estado:$('estado').value};
+    trabajo:$('trabajo').value||'Trabajo pendiente',obs:obsConPrioridad($('obs').value,$('prioridad').value),estado:$('estado').value};
   const p=db.trabajos.findIndex(a=>a.id===id);
   p>=0?db.trabajos[p]=x:db.trabajos.unshift(x);
   $('editId').value='';
@@ -335,7 +357,8 @@ async function guardarHoja(){
 function editar(id){
   const x=db.trabajos.find(a=>a.id===id); if(!x)return;
   $('editId').value=x.id;
-  ['fecha','cliente','telefono','matricula','vehiculo','km','direccion','trabajo','obs','estado'].forEach(k=>$(k).value=x[k]||'');
+  ['fecha','cliente','telefono','matricula','vehiculo','km','direccion','trabajo','estado'].forEach(k=>$(k).value=x[k]||'');
+  $('obs').value=obsLimpias(x.obs); $('prioridad').value=prioridadDe(x);
   mostrar('hojas'); $('vozEstado').textContent='✏️ Modifica lo necesario y pulsa GUARDAR HOJA.';
 }
 function imprimirHoja(id){
@@ -345,6 +368,7 @@ function imprimirHoja(id){
   area.innerHTML=`<div class="printSheet"><h1>HOJA DE TRABAJO · TALLER FABI DOMÍNGUEZ</h1><div class="printGrid">
   <div class="printRow"><span class="printLabel">Fecha:</span> ${x.fecha||''}</div>
   <div class="printRow"><span class="printLabel">Estado:</span> ${x.estado||''}</div>
+  <div class="printRow"><span class="printLabel">Prioridad:</span> ${prioridadDe(x)}</div>
   <div class="printRow"><span class="printLabel">Cliente:</span> ${x.cliente||''}</div>
   <div class="printRow"><span class="printLabel">Teléfono:</span> ${x.telefono||''}</div>
   <div class="printRow"><span class="printLabel">Matrícula:</span> ${x.matricula||''}</div>
@@ -352,7 +376,7 @@ function imprimirHoja(id){
   <div class="printRow"><span class="printLabel">Kilómetros:</span> ${x.km||''}</div>
   <div class="printRow"><span class="printLabel">Dirección:</span> ${x.direccion||''}</div>
   <div class="printRow printFull"><span class="printLabel">Trabajos a realizar:</span><br>${(x.trabajo||'').replace(/\n/g,'<br>')}</div>
-  <div class="printRow printFull"><span class="printLabel">Observaciones:</span><br>${(x.obs||'').replace(/\n/g,'<br>')}</div>
+  <div class="printRow printFull"><span class="printLabel">Observaciones:</span><br>${obsLimpias(x.obs).replace(/\n/g,'<br>')}</div>
   </div></div>`;
   setTimeout(()=>window.print(),50);
 }
@@ -412,7 +436,7 @@ async function eliminarCaja(id){
 
 function escHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function imprimirListado(titulo,subtitulo,contenido){let area=$('printArea');if(!area){area=document.createElement('div');area.id='printArea';document.body.appendChild(area)}area.innerHTML=`<div class="printSheet"><h1>${titulo}</h1><div style="text-align:center;margin-bottom:16px">${subtitulo}</div>${contenido}</div>`;setTimeout(()=>window.print(),50)}
-function imprimirHojasAbiertas(){const a=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((x,y)=>(x.fecha||'').localeCompare(y.fecha||''));const f=a.length?a.map(x=>`<div class="printRow" style="border-bottom:1px solid #999;padding:8px 0"><b>${escHtml(x.fecha)} · ${escHtml(x.cliente)}</b><br>Matrícula: ${escHtml(x.matricula)} · Vehículo: ${escHtml(x.vehiculo)}<br>Trabajo: ${escHtml(x.trabajo)}</div>`).join(''):'<p>No hay hojas abiertas.</p>';imprimirListado('LISTADO DE HOJAS ABIERTAS · TALLER FABI DOMÍNGUEZ',`${a.length} hojas abiertas`,f)}
+function imprimirHojasAbiertas(){const a=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((x,y)=>(x.fecha||'').localeCompare(y.fecha||''));const f=a.length?a.map(x=>`<div class="printRow" style="border-bottom:1px solid #999;padding:8px 0"><b>${escHtml(x.fecha)} · ${escHtml(x.cliente)}</b><br>Matrícula: ${escHtml(x.matricula)} · Vehículo: ${escHtml(x.vehiculo)}<br>Trabajo: ${escHtml(x.trabajo)}<br>Prioridad: ${escHtml(prioridadDe(x))}</div>`).join(''):'<p>No hay hojas abiertas.</p>';imprimirListado('LISTADO DE HOJAS ABIERTAS · TALLER FABI DOMÍNGUEZ',`${a.length} hojas abiertas`,f)}
 function datosCajaMes(){const mes=$('mesCaja').value||hoy().slice(0,7);const a=db.mov.filter(x=>(x.fecha||'').slice(0,7)===mes).sort((x,y)=>(x.fecha||'').localeCompare(y.fecha||''));const entradas=a.filter(x=>x.tipo==='entrada').reduce((z,x)=>z+Number(x.importe||0),0);const salidas=a.filter(x=>x.tipo==='salida').reduce((z,x)=>z+Number(x.importe||0),0);return{mes,a,entradas,salidas,resultado:entradas-salidas}}
 function imprimirCajaMes(){const d=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';const f=d.a.length?d.a.map(x=>`<div class="printRow" style="border-bottom:1px solid #999;padding:8px 0"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'ENTRADA':'SALIDA'} · ${dinero(x.importe)}</b><br>${escHtml(x.concepto)}</div>`).join(''):'<p>No hay movimientos en este mes.</p>';imprimirListado('LISTADO DE CAJA · TALLER FABI DOMÍNGUEZ',escHtml(d.mes),`<div><b>Entradas:</b> ${dinero(d.entradas)} &nbsp; <b>Salidas:</b> ${dinero(d.salidas)} &nbsp; <b>Resultado:</b> ${dinero(d.resultado)}</div>`+f)}
 
@@ -420,7 +444,7 @@ function render(){
   $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   const abiertas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   $('numAbiertas').textContent=abiertas.length;
-  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>`<div class="trabajoAbierto"><div class="fechaEntrada">📅 Entrada: ${escHtml(x.fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula)}${x.matricula&&x.vehiculo?' · ':''}${escHtml(x.vehiculo)}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div></div>`).join(''):'<div>✅ No hay hojas abiertas.</div>';
+  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>{const p=prioridadDe(x);return `<div class="trabajoAbierto"><div class="fechaEntrada">📅 Entrada: ${escHtml(x.fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula)}${x.matricula&&x.vehiculo?' · ':''}${escHtml(x.vehiculo)}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div><div class="prioridadLinea">Prioridad: <select onchange="cambiarPrioridad(${x.id},this.value)"><option ${p==='Alta'?'selected':''}>Alta</option><option ${p==='Normal'?'selected':''}>Normal</option><option ${p==='Baja'?'selected':''}>Baja</option></select></div></div>`}).join(''):'<div>✅ No hay hojas abiertas.</div>';
   const cm=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   $('resumenCajaMes').innerHTML=`Entradas: ${dinero(cm.entradas)} · Salidas: ${dinero(cm.salidas)} · Resultado: ${dinero(cm.resultado)}`;
   $('listaCajaMes').innerHTML=cm.a.length?cm.a.map(x=>`<div class="listadoFila"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'➕':'➖'} ${dinero(x.importe)}</b><div>${escHtml(x.concepto)}</div></div>`).join(''):'<div>Sin movimientos en este mes.</div>';
