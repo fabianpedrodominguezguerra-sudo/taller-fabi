@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.20</title>
+<title>Taller Fabi v0.21</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -36,6 +36,15 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 .topTabs button{padding:12px}
 .loginCard{max-width:520px;margin:30px auto}
 .small{font-size:12px;color:#667085}.listadoResumen{background:#eef3f8;border-radius:10px;padding:10px;margin:8px 0;font-weight:700}.listadoFila{border-bottom:1px solid #dce5ef;padding:8px 0}
+#listaAbiertas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.trabajoAbierto{border:1px solid #dce5ef;border-radius:12px;padding:11px;background:#f8fbff;min-width:0}
+.trabajoAbierto .fechaEntrada{font-size:12px;color:#667085;margin-bottom:5px}
+.trabajoAbierto .clienteAbierto{font-weight:800;margin-bottom:5px}
+.trabajoAbierto .vehiculoAbierto{font-size:14px;margin-bottom:7px}
+.trabajoAbierto .trabajoTexto{font-size:14px;line-height:1.35}
+@media(max-width:799px) and (min-width:520px){#listaAbiertas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:519px){#listaAbiertas{grid-template-columns:1fr}}
+
 @media(min-width:800px){
   .nav{display:none}
   main{padding-bottom:30px}
@@ -60,7 +69,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.20 · Hojas + Caja + Listados + impresión corregida</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.21 · Hojas abiertas organizadas por fecha</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -411,7 +420,7 @@ function render(){
   $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   const abiertas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   $('numAbiertas').textContent=abiertas.length;
-  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>`<div class="listadoFila"><b>${escHtml(x.fecha)} · ${escHtml(x.cliente)}</b><div>${escHtml(x.matricula)} · ${escHtml(x.vehiculo)}</div><div>${escHtml(x.trabajo)}</div></div>`).join(''):'<div>✅ No hay hojas abiertas.</div>';
+  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>`<div class="trabajoAbierto"><div class="fechaEntrada">📅 Entrada: ${escHtml(x.fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula)}${x.matricula&&x.vehiculo?' · ':''}${escHtml(x.vehiculo)}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div></div>`).join(''):'<div>✅ No hay hojas abiertas.</div>';
   const cm=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   $('resumenCajaMes').innerHTML=`Entradas: ${dinero(cm.entradas)} · Salidas: ${dinero(cm.salidas)} · Resultado: ${dinero(cm.resultado)}`;
   $('listaCajaMes').innerHTML=cm.a.length?cm.a.map(x=>`<div class="listadoFila"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'➕':'➖'} ${dinero(x.importe)}</b><div>${escHtml(x.concepto)}</div></div>`).join(''):'<div>Sin movimientos en este mes.</div>';
