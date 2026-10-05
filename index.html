@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.24</title>
+<title>Taller Fabi v0.25</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -79,7 +79,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.24 · Prioridades corregidas</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.25 · Dictado numérico corregido</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -288,16 +288,30 @@ function aDigitos(s){
 function normalizaMatricula(s){
  let z=(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[.,;:!?-]+/g,' ');
  const toks=z.split(/\s+/).filter(Boolean),out=[];
- for(const x of toks){if(dig[x]!=null)out.push(dig[x]);else if(/^\d+$/.test(x))out.push(x);else if(/^[a-zñ0-9]+$/.test(x))out.push(x.toUpperCase())}
+ for(let i=0;i<toks.length;){
+   const x=toks[i];
+   if(dig[x]!=null){out.push(dig[x]);i++;continue}
+   if(/^\d+$/.test(x)){out.push(x);i++;continue}
+   let j=i,p=[];
+   while(j<toks.length&&(toks[j]==='y'||unidades[toks[j]]!=null||decenas[toks[j]]!=null||centenas[toks[j]]!=null||toks[j]==='mil')){p.push(toks[j]);j++}
+   if(p.length){const n=palabrasANumero(p.join(' '));if(n!=null){out.push(String(n));i=j;continue}}
+   if(/^[a-zñ0-9]+$/.test(x))out.push(x.toUpperCase());
+   i++;
+ }
  return out.join('').replace(/[^A-ZÑ0-9]/g,'');
 }
 
 function extraerImporteVoz(t){
-  const m=t.match(/\d+(?:[,.]\d+)?/); if(m)return {valor:Number(m[0].replace(',','.')),texto:m[0]};
-  const limpio=normalizaNumero(t).replace(/\b(entrada|salida|gasto|pago|euros?|de|por)\b/g,' ').replace(/\s+/g,' ').trim();
-  const palabras=limpio.split(' '); let usadas=[];
-  for(const w of palabras){if(w==='y'||unidades[w]!=null||decenas[w]!=null||centenas[w]!=null||w==='mil'||w==='millon'||w==='millones')usadas.push(w);else if(usadas.length)break}
-  const texto=usadas.join(' '), valor=palabrasANumero(texto); return valor!=null?{valor,texto}:null;
+ const m=t.match(/\d+(?:[,.]\d+)?/);if(m)return{valor:Number(m[0].replace(',','.')),textoOriginal:m[0]};
+ const ps=t.trim().split(/\s+/),u=[];let empezo=false;
+ for(const original of ps){
+   const w=normalizaNumero(original);
+   if(/^(entrada|salida|gasto|pago|de|por)$/.test(w)&&!empezo)continue;
+   if(w==='y'||unidades[w]!=null||decenas[w]!=null||centenas[w]!=null||w==='mil'||w==='millon'||w==='millones'){u.push(original);empezo=true;continue}
+   if(empezo)break;
+ }
+ const textoOriginal=u.join(' '),valor=palabrasANumero(textoOriginal);
+ return valor!=null?{valor,textoOriginal}:null;
 }
 function extraer(t,label,next){
   const fin=next.length?'(?=\\s+(?:'+next.join('|')+')\\b|$)':'$';
@@ -393,7 +407,7 @@ function dictarCaja(){
     $('tipo').value=/salida|gasto|pago/i.test(t)?'salida':'entrada';
     const imp=extraerImporteVoz(t); if(imp)$('importe').value=String(imp.valor).replace('.',',');
     let concepto=t.replace(/entrada|salida|gasto|pago/ig,'');
-    if(imp){concepto=concepto.replace(imp.texto,'')}
+    if(imp){concepto=concepto.replace(imp.textoOriginal,'')}
     concepto=concepto.replace(/\s*(euros?|€)\s*/i,' ').replace(/\s+/g,' ').trim();
     $('concepto').value=concepto;
     $('cajaEstado').textContent=imp?'✅ Movimiento dictado. Revisa y pulsa GUARDAR MOVIMIENTO.':'⚠️ No he entendido el importe. Puedes escribirlo a mano.';
