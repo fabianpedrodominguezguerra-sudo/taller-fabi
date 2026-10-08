@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.26</title>
+<title>Taller Fabi v0.27</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -79,7 +79,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.26 · Agenda de trabajos</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.27 · Agenda desde hojas</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -495,12 +495,12 @@ function imprimirCajaMes(){const d=datosCajaMes(),dinero=n=>Number(n).toLocaleSt
 
 
 // ===== AGENDA =====
-// Las citas permanecen en este dispositivo hasta habilitar la tabla agenda_citas en Supabase.
+// Las citas permanecen en este dispositivo hasta habilitar la tabla agenda en Supabase.
 async function cargarAgendaRemota(){
   agendaRemota=false;
   if(!sb||!user){actualizarAvisoAgenda();return}
-  const {data,error}=await sb.from('agenda_citas').select('*').order('fecha',{ascending:true});
-  if(error){actualizarAvisoAgenda();return}
+  const {data,error}=await sb.from('agenda').select('*').order('fecha',{ascending:true});
+  if(error){actualizarAvisoAgenda();$('agendaSync').textContent='⚠️ No se puede conectar la agenda con Supabase: '+error.message;return}
   db.agenda=(data||[]).map(x=>({id:Number(x.id),fecha:x.fecha||'',cliente:x.cliente||'',telefono:x.telefono||'',matricula:x.matricula||'',vehiculo:x.vehiculo||'',trabajo:x.trabajo||'',estado:x.estado||'Pendiente'}));
   agendaRemota=true;actualizarAvisoAgenda();
 }
@@ -520,8 +520,9 @@ async function guardarCita(){
   const id=Number($('agendaEditId').value)||Date.now();
   const anterior=db.agenda.find(x=>x.id===id);
   const x={id,fecha,cliente,telefono:$('agendaTelefono').value.trim(),matricula:normalizaMatricula($('agendaMatricula').value),vehiculo:$('agendaVehiculo').value.trim(),trabajo,estado:anterior?.estado||'Pendiente'};
+  if(REMOTE_CONFIGURED && sb && user && !agendaRemota){$('agendaEstado').textContent='⚠️ Agenda sin sincronización. No se ha guardado la cita; comprueba la conexión con Supabase.';return}
   if(agendaRemota){
-    const {error}=await sb.from('agenda_citas').upsert({...x,user_id:user.id});
+    const {error}=await sb.from('agenda').upsert({...x,user_id:user.id});
     if(error){$('agendaEstado').textContent='⚠️ No se guardó la cita: '+error.message;return}
   }
   const pos=db.agenda.findIndex(a=>a.id===id);if(pos>=0)db.agenda[pos]=x;else db.agenda.push(x);
@@ -538,12 +539,12 @@ function editarCita(id){
 }
 async function borrarCita(id){
   if(!confirm('¿Seguro que quieres borrar esta cita?'))return;
-  if(agendaRemota){const {error}=await sb.from('agenda_citas').delete().eq('id',id);if(error){$('agendaEstado').textContent='⚠️ No se pudo borrar: '+error.message;return}}
+  if(agendaRemota){const {error}=await sb.from('agenda').delete().eq('id',id);if(error){$('agendaEstado').textContent='⚠️ No se pudo borrar: '+error.message;return}}
   db.agenda=db.agenda.filter(a=>a.id!==id);saveLocal();$('agendaEstado').textContent='🗑️ Cita borrada.';
 }
 async function cambiarEstadoCita(id,estado){
   const x=db.agenda.find(a=>a.id===id);if(!x)return;
-  if(agendaRemota){const {error}=await sb.from('agenda_citas').update({estado}).eq('id',id);if(error){$('agendaEstado').textContent='⚠️ No se pudo actualizar: '+error.message;return}}
+  if(agendaRemota){const {error}=await sb.from('agenda').update({estado}).eq('id',id);if(error){$('agendaEstado').textContent='⚠️ No se pudo actualizar: '+error.message;return}}
   x.estado=estado;saveLocal();
 }
 function crearHojaDesdeCita(id){
@@ -554,6 +555,22 @@ function crearHojaDesdeCita(id){
   $('km').value='';$('direccion').value='';$('trabajo').value=x.trabajo;$('obs').value='';
   $('estado').value='Abierto';$('prioridad').value='Normal';
   mostrar('hojas');$('vozEstado').textContent='📅 Datos copiados de la cita. Revisa y pulsa GUARDAR HOJA para crearla.';
+}
+function pasarHojaAgenda(id){
+  const x=db.trabajos.find(a=>a.id===id);
+  if(!x)return;
+  // La hoja original se conserva abierta, sin cambios.
+  limpiarCita();
+  $('agendaFecha').value=$('agendaDia').value||hoy();
+  $('agendaCliente').value=x.cliente||'';
+  $('agendaTelefono').value=x.telefono||'';
+  $('agendaMatricula').value=x.matricula||'';
+  $('agendaVehiculo').value=x.vehiculo||'';
+  $('agendaTrabajo').value=x.trabajo||'';
+  $('agendaTitulo').textContent='📅 Programar trabajo desde hoja';
+  mostrar('agenda');
+  $('agendaEstado').textContent='Elige el día y pulsa GUARDAR CITA. La hoja de trabajo seguirá abierta.';
+  $('agendaFecha').scrollIntoView({behavior:'smooth',block:'center'});
 }
 function renderAgenda(){
   actualizarAvisoAgenda();
@@ -569,11 +586,11 @@ function render(){
   $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   const abiertas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   $('numAbiertas').textContent=abiertas.length;
-  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>{const p=prioridadDe(x);return `<div class="trabajoAbierto prio-${p}"><div class="fechaEntrada">📅 Entrada: ${escHtml(x.fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula)}${x.matricula&&x.vehiculo?' · ':''}${escHtml(x.vehiculo)}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div><div class="prioridadLinea">Prioridad: <select class="prio-${p}" onchange="cambiarPrioridad(${x.id},this.value)"><option value="Alta" ${p==='Alta'?'selected':''}>🔴 Alta</option><option value="Normal" ${p==='Normal'?'selected':''}>🟡 Normal</option><option value="Baja" ${p==='Baja'?'selected':''}>🟢 Baja</option></select></div></div>`}).join(''):'<div>✅ No hay hojas abiertas.</div>';
+  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>{const p=prioridadDe(x);return `<div class="trabajoAbierto prio-${p}"><div class="fechaEntrada">📅 Entrada: ${escHtml(x.fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula)}${x.matricula&&x.vehiculo?' · ':''}${escHtml(x.vehiculo)}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div><button class="light" style="margin-top:9px;padding:9px;font-size:13px" onclick="pasarHojaAgenda(${x.id})">📅 PASAR A AGENDA</button><div class="prioridadLinea">Prioridad: <select class="prio-${p}" onchange="cambiarPrioridad(${x.id},this.value)"><option value="Alta" ${p==='Alta'?'selected':''}>🔴 Alta</option><option value="Normal" ${p==='Normal'?'selected':''}>🟡 Normal</option><option value="Baja" ${p==='Baja'?'selected':''}>🟢 Baja</option></select></div></div>`}).join(''):'<div>✅ No hay hojas abiertas.</div>';
   const cm=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   $('resumenCajaMes').innerHTML=`Entradas: ${dinero(cm.entradas)} · Salidas: ${dinero(cm.salidas)} · Resultado: ${dinero(cm.resultado)}`;
   $('listaCajaMes').innerHTML=cm.a.length?cm.a.map(x=>`<div class="listadoFila"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'➕':'➖'} ${dinero(x.importe)}</b><div>${escHtml(x.concepto)}</div></div>`).join(''):'<div>Sin movimientos en este mes.</div>';
-  $('lista').innerHTML=db.trabajos.length?db.trabajos.map(x=>`<div class="item"><b>${x.fecha} · ${x.cliente}</b><div>${x.matricula||''} · ${x.vehiculo||''}</div><div>${x.trabajo}</div><div class="actions"><button onclick="editar(${x.id})">✏️ MODIFICAR</button><button onclick="imprimirHoja(${x.id})">🖨️ IMPRIMIR</button><button class="light" onclick="eliminarHoja(${x.id})">🗑️ BORRAR</button></div><div style="margin-top:6px"><button class="light">${x.estado}</button></div></div>`).join(''):'<div>Sin hojas guardadas.</div>';
+  $('lista').innerHTML=db.trabajos.length?db.trabajos.map(x=>`<div class="item"><b>${x.fecha} · ${x.cliente}</b><div>${x.matricula||''} · ${x.vehiculo||''}</div><div>${x.trabajo}</div><div class="actions"><button onclick="editar(${x.id})">✏️ MODIFICAR</button><button class="light" onclick="pasarHojaAgenda(${x.id})">📅 PASAR A AGENDA</button><button onclick="imprimirHoja(${x.id})">🖨️ IMPRIMIR</button><button class="light" onclick="eliminarHoja(${x.id})">🗑️ BORRAR</button></div><div style="margin-top:6px"><button class="light">${x.estado}</button></div></div>`).join(''):'<div>Sin hojas guardadas.</div>';
   $('movs').innerHTML=db.mov.length?db.mov.map(x=>`<div class="item"><b>${x.fecha} · ${x.tipo==='entrada'?'➕':'➖'} ${Number(x.importe).toFixed(2)} €</b><div>${x.concepto}</div><div class="actions"><button class="light" onclick="eliminarCaja(${x.id})">🗑️ BORRAR</button></div></div>`).join(''):'<div>Sin movimientos.</div>';
 }
 init();
