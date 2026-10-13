@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.27</title>
+<title>Taller Fabi v0.31 PRUEBAS</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -27,12 +27,12 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 .item{border:1px solid #dce5ef;border-radius:10px;padding:10px;margin:7px 0}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}
 .hide{display:none!important}
-.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #cbd6e2;display:grid;grid-template-columns:1fr 1fr 1fr;z-index:99;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #cbd6e2;display:grid;grid-template-columns:repeat(4,1fr);z-index:99;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
 .nav button{border-radius:0;margin:0;padding:18px 8px;font-size:18px}
 .nav .cajaBtn{background:#16844f}
 .sectionTitle{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .badge{background:#16844f;color:#fff;padding:6px 10px;border-radius:999px;font-weight:700}
-.topTabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.topTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
 .topTabs button{padding:12px}
 .loginCard{max-width:520px;margin:30px auto}
 .small{font-size:12px;color:#667085}.listadoResumen{background:#eef3f8;border-radius:10px;padding:10px;margin:8px 0;font-weight:700}.listadoFila{border-bottom:1px solid #dce5ef;padding:8px 0}
@@ -79,7 +79,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.27 · Agenda desde hojas</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.31 · PRUEBAS DEUDORES SINCRONIZADOS</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -101,7 +101,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
   <div class="topTabs">
     <button onclick="mostrar('hojas')">🔧 HOJAS DE TRABAJO</button>
     <button onclick="mostrar('agenda')">📅 AGENDA</button>
-    <button class="green" onclick="mostrar('caja')">💰 CAJA</button>
+    <button class="green" onclick="mostrar('caja')">💰 CAJA</button><button onclick="mostrar('deudores')">🔴 DEUDORES</button>
   </div>
 
   <section id="hojas">
@@ -120,7 +120,17 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
   <label>Dirección</label><div class="field"><input id="direccion"><button class="mic" onclick="dictarCampo('direccion')">🎤</button></div>
   <label>Trabajos a realizar</label><div class="field"><textarea id="trabajo" rows="4"></textarea><button class="mic" onclick="dictarCampo('trabajo')">🎤</button></div>
   <label>Observaciones</label><textarea id="obs" rows="3"></textarea>
-  <label>Estado</label><select id="estado"><option>Abierto</option><option>Terminado</option></select>
+  <div style="background:#f0f7ff;border:1px solid #cbd6e2;padding:12px;border-radius:10px;margin-top:12px">
+    <h3>💶 Importe y cobro del trabajo</h3>
+    <label>Descripción para el cobro</label><textarea id="cobroDescripcion" rows="2" placeholder="Ej.: Cambio de alternador"></textarea>
+    <label>Importe total (€)</label><input id="cobroTotal" inputmode="decimal" placeholder="0,00" oninput="actualizarPendienteHoja()">
+    <label>Cantidad cobrada (€)</label><input id="cobroPagado" inputmode="decimal" placeholder="0,00" oninput="actualizarPendienteHoja()">
+    <div id="cobroPendiente" class="status">Pendiente: 0,00 €</div>
+    <button type="button" class="orange" onclick="pasarActualADeudores()">🔴 PASAR A DEUDORES</button>
+    <div class="small">Primero guarda la hoja. La deuda se añadirá una sola vez por hoja; no se registra en Caja automáticamente. Los datos de cobro de la hoja se conservan en este navegador; la deuda se sincroniza al pasarla a Deudores.</div>
+  </div>
+  <div id="avisoDeudaHoja" class="status hide" style="background:#fee2e2;color:#991b1b;border:2px solid #dc2626"></div>
+   <label>Estado</label><select id="estado"><option>Abierto</option><option>Terminado</option></select>
   <label>Prioridad</label><select id="prioridad"><option>Normal</option><option>Alta</option><option>Baja</option></select>
   <input id="editId" type="hidden"><input id="agendaOrigen" type="hidden">
   <button class="green" style="margin-top:10px" onclick="guardarHoja()">💾 GUARDAR HOJA</button>
@@ -174,13 +184,33 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
   <div class="card"><h3>📋 LISTADO DE CAJA DEL MES</h3><label>Mes</label><input id="mesCaja" type="month" onchange="render()"><div id="resumenCajaMes" class="listadoResumen"></div><div id="listaCajaMes"></div><button style="margin-top:10px" onclick="imprimirCajaMes()">🖨️ IMPRIMIR CAJA DEL MES</button></div>
 <div class="card"><h3>Movimientos de caja</h3><div id="movs"></div></div>
   </section>
+  <section id="deudores" class="hide">
+    <div class="card">
+      <h2>🔴 DEUDORES</h2>
+      <div id="deudaSync" class="status">Comprobando sincronización…</div>
+      <div class="small">Total pendiente de cobro</div><div id="totalDeuda" class="metric" style="color:#b42318">0,00 €</div>
+      <div id="deudaEstado" class="status">Puedes añadir deudas o pasarlas desde una hoja de trabajo.</div>
+      <div id="listaDeudores"></div>
+    </div>
+    <div class="card">
+      <h3>➕ Añadir deuda manualmente</h3>
+      <label>Fecha</label><input id="deudaFecha" type="date">
+      <label>Cliente</label><input id="deudaCliente">
+      <label>Teléfono</label><input id="deudaTelefono" inputmode="tel">
+      <label>Matrícula</label><input id="deudaMatricula">
+      <label>Descripción</label><textarea id="deudaConcepto" rows="2"></textarea>
+      <label>Importe pendiente (€)</label><input id="deudaImporte" inputmode="decimal">
+      <button class="green" style="margin-top:10px" onclick="crearDeuda()">💾 GUARDAR DEUDA</button>
+    </div>
+    <div class="card"><h3>Deudas antiguas guardadas en este navegador</h3><div id="importacionDeudas" class="small"></div><button class="light" style="margin-top:8px" onclick="importarDeudasLocales()">☁️ IMPORTAR DEUDAS ANTIGUAS</button></div>
+  </section>
 </div>
 </main>
 
 <nav class="nav">
 <button onclick="mostrar('hojas')">🔧 HOJAS</button>
 <button onclick="mostrar('agenda')">📅 AGENDA</button>
-<button class="cajaBtn" onclick="mostrar('caja')">💰 CAJA</button>
+<button class="cajaBtn" onclick="mostrar('caja')">💰 CAJA</button><button onclick="mostrar('deudores')">🔴 DEUDAS</button>
 </nav>
 
 <script>
@@ -196,21 +226,61 @@ const REMOTE_CONFIGURED = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_
 let sb=null, user=null;
 let db=JSON.parse(localStorage.getItem(LOCAL_KEY)||'null')||{caja:370,trabajos:[],mov:[]};
 if(!Array.isArray(db.agenda))db.agenda=[];
-let agendaRemota=false;
+// Libro de deudas independiente en pruebas: no sobreescribir al cargar datos remotos.
+const DEUDAS_KEY="taller_fabi_deudas_pruebas_v028";
+let deudas=JSON.parse(localStorage.getItem(DEUDAS_KEY)||"[]");
+const COBROS_KEY='taller_fabi_cobros_hoja_v029';
+let cobrosHoja=JSON.parse(localStorage.getItem(COBROS_KEY)||'{}')||{};
+function guardarCobroLocal(id){
+ if(!id)return;
+ cobrosHoja[id]={descripcion:$('cobroDescripcion').value,total:$('cobroTotal').value,pagado:$('cobroPagado').value};
+ localStorage.setItem(COBROS_KEY,JSON.stringify(cobrosHoja));
+}
+function cargarCobroHoja(id){
+ const c=cobrosHoja[id]||{};
+ $('cobroDescripcion').value=c.descripcion||'';
+ $('cobroTotal').value=c.total||'';
+ $('cobroPagado').value=c.pagado||'';
+ actualizarPendienteHoja();
+}
+function actualizarPendienteHoja(){
+ const t=numeroDinero($('cobroTotal').value),p=numeroDinero($('cobroPagado').value);
+ $('cobroPendiente').textContent='Pendiente: '+euros(Math.max(0,(Number.isFinite(t)?t:0)-(Number.isFinite(p)?p:0)));
+}
+async function pasarActualADeudores(){
+ const id=Number($('editId').value);
+ if(!id){alert('Primero GUARDA LA HOJA y después pulsa MODIFICAR para pasarla a Deudores.');return}
+ const x=db.trabajos.find(t=>t.id===id);
+ if(!x){alert('No se encuentra la hoja guardada.');return}
+ const total=numeroDinero($('cobroTotal').value),pagado=numeroDinero($('cobroPagado').value||'0');
+ if(!Number.isFinite(total)||total<=0||!Number.isFinite(pagado)||pagado<0||pagado>=total){alert('Indica un importe total y un cobro inferior al total.');return}
+ if(deudas.some(d=>Number(d.hojaId)===id)){alert('Esta hoja ya está en Deudores. Consulta la pestaña Deudores para registrar pagos.');return}
+ const descripcion=$('cobroDescripcion').value.trim()||x.trabajo||'Trabajo realizado';
+ if(!confirm('¿Pasar a Deudores '+x.cliente+' con '+euros(total-pagado)+' pendientes?'))return;
+ guardarCobroLocal(id);
+ const deuda={id:Date.now(),hojaId:id,cliente:x.cliente,telefono:x.telefono,matricula:x.matricula,fecha:x.fecha||hoy(),concepto:descripcion,total:Math.round(total*100)/100,pagos:pagado>0?[{fecha:hoy(),importe:Math.round(pagado*100)/100,nota:'Cobrado previamente en hoja'}]:[]};
+ if(await guardarDeudaRemota(deuda)){mostrar('deudores');alert('Deuda sincronizada. Los cobros NO se pasan automáticamente a Caja.')}
+}
+if(!Array.isArray(deudas))deudas=[];
+let agendaRemota=false, deudasRemotas=false;
+const deudasAntiguas=JSON.parse(localStorage.getItem(DEUDAS_KEY)||'[]');
 
 const hoy=()=>new Date().toISOString().slice(0,10);
 $('fecha').value=$('cfecha').value=hoy();
 $('mesCaja').value=hoy().slice(0,7);
 $('agendaDia').value=$('agendaFecha').value=hoy();
+$('deudaFecha').value=hoy();
 
 function mostrar(sec){
   $('hojas').classList.toggle('hide',sec!=='hojas');
   $('caja').classList.toggle('hide',sec!=='caja');
   $('agenda').classList.toggle('hide',sec!=='agenda');
+   $('deudores').classList.toggle('hide',sec!=='deudores');
   window.scrollTo(0,0);
   render();
 }
 function saveLocal(){localStorage.setItem(LOCAL_KEY,JSON.stringify(db));render()}
+function saveDeudas(){localStorage.setItem('taller_fabi_deudas_sync_v030',JSON.stringify(deudas));render()}
 function SR(){return window.SpeechRecognition||window.webkitSpeechRecognition}
 
 async function init(){
@@ -243,7 +313,7 @@ async function init(){
 function mostrarApp(){
   $('loginScreen').classList.add('hide');
   $('app').classList.remove('hide');
-  $('syncBadge').textContent='☁️ Hojas y Caja sincronizadas';
+  $('syncBadge').textContent=deudasRemotas?'☁️ Hojas, Caja y Deudores sincronizados':'⚠️ Deudores sin sincronizar';
   render();
 }
 async function iniciarSesion(){
@@ -275,6 +345,7 @@ async function cargarRemoto(){
   db.mov=(m||[]).map(x=>({id:Number(x.id),fecha:x.fecha,tipo:x.tipo,importe:Number(x.importe),concepto:x.concepto}));
   db.caja=370 + db.mov.reduce((a,x)=>a+(x.tipo==='entrada'?x.importe:-x.importe),0);
   await cargarAgendaRemota();
+  await cargarDeudasRemotas();
   saveLocal();
 }
 
@@ -397,7 +468,8 @@ async function guardarHoja(){
     trabajo:$('trabajo').value||'Trabajo pendiente',obs:obsConPrioridad($('obs').value,$('prioridad').value),estado:$('estado').value};
   const p=db.trabajos.findIndex(a=>a.id===id);
   p>=0?db.trabajos[p]=x:db.trabajos.unshift(x);
-  $('editId').value='';
+  guardarCobroLocal(id);
+  $('editId').value=String(id);
 
   if(REMOTE_CONFIGURED && sb && user){
     const {error}=await sb.from('trabajos').upsert({...x,user_id:user.id});
@@ -411,8 +483,8 @@ function editar(id){
   const x=db.trabajos.find(a=>a.id===id); if(!x)return;
   $('editId').value=x.id; $('agendaOrigen').value='';
   ['fecha','cliente','telefono','matricula','vehiculo','km','direccion','trabajo','estado'].forEach(k=>$(k).value=x[k]||'');
-  $('obs').value=obsLimpias(x.obs); $('prioridad').value=prioridadDe(x);
-  mostrar('hojas'); $('vozEstado').textContent='✏️ Modifica lo necesario y pulsa GUARDAR HOJA.';
+  $('obs').value=obsLimpias(x.obs); $('prioridad').value=prioridadDe(x); cargarCobroHoja(id);
+  mostrar('hojas'); actualizarAvisoDeuda(); $('vozEstado').textContent='✏️ Modifica lo necesario y pulsa GUARDAR HOJA.';
 }
 function imprimirHoja(id){
   const x=db.trabajos.find(a=>a.id===id); if(!x)return;
@@ -494,6 +566,74 @@ function datosCajaMes(){const mes=$('mesCaja').value||hoy().slice(0,7);const a=d
 function imprimirCajaMes(){const d=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';const f=d.a.length?d.a.map(x=>`<div class="printRow" style="border-bottom:1px solid #999;padding:8px 0"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'ENTRADA':'SALIDA'} · ${dinero(x.importe)}</b><br>${escHtml(x.concepto)}</div>`).join(''):'<p>No hay movimientos en este mes.</p>';imprimirListado('LISTADO DE CAJA · TALLER FABI DOMÍNGUEZ',escHtml(d.mes),`<div><b>Entradas:</b> ${dinero(d.entradas)} &nbsp; <b>Salidas:</b> ${dinero(d.salidas)} &nbsp; <b>Resultado:</b> ${dinero(d.resultado)}</div>`+f)}
 
 
+// ===== DEUDORES: módulo independiente de pruebas, SOLO LOCAL =====
+const euros=n=>Number(n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+const claveCliente=s=>String(s||'').trim().toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+const numeroDinero=s=>{const t=String(s||'').trim().replace(/\s/g,'');return Number(t.includes(',')?t.replace(/\./g,'').replace(',','.'):t)};
+async function crearDeuda(){
+ const cliente=$('deudaCliente').value.trim(),importe=numeroDinero($('deudaImporte').value);
+ if(!cliente||!Number.isFinite(importe)||importe<=0){$('deudaEstado').textContent='⚠️ Indica un cliente y un importe positivo.';return}
+ const deuda={id:Date.now(),cliente,telefono:$('deudaTelefono').value.trim(),matricula:normalizaMatricula($('deudaMatricula').value),fecha:$('deudaFecha').value||hoy(),concepto:$('deudaConcepto').value.trim(),total:Math.round(importe*100)/100,pagos:[]};
+ if(!await guardarDeudaRemota(deuda))return;
+ ['deudaCliente','deudaTelefono','deudaMatricula','deudaImporte','deudaConcepto'].forEach(k=>$(k).value='');
+ $('deudaFecha').value=hoy();
+}
+function pendienteDeuda(d){return Math.max(0,Math.round((Number(d.total||0)-(d.pagos||[]).reduce((a,p)=>a+Number(p.importe||0),0))*100)/100)}
+async function registrarPagoDeuda(id){
+ const d=deudas.find(x=>x.id===id);if(!d)return;
+ const valor=prompt('Importe recibido de '+d.cliente+' (pendiente '+euros(pendienteDeuda(d))+'). Este cobro NO se añadirá automáticamente a Caja:');
+ if(valor===null)return;
+ const imp=numeroDinero(valor),pend=pendienteDeuda(d);
+ if(!Number.isFinite(imp)||imp<=0||Math.round(imp*100)>Math.round(pend*100)){alert('Introduce un importe positivo que no supere la deuda.');return}
+ const actualizado={...d,pagos:[...(d.pagos||[]),{fecha:hoy(),importe:Math.round(imp*100)/100}]};
+ if(!await guardarDeudaRemota(actualizado))return;
+ alert('Cobro registrado en Deudores. Si corresponde, anótalo también en Caja para reflejar el movimiento de efectivo.');
+}
+async function borrarDeuda(id){if(!confirm('¿Borrar esta deuda y todos sus pagos registrados?'))return;if(!deudasRemotas){$('deudaEstado').textContent='⚠️ No hay sincronización. No se ha borrado.';return}const {error}=await sb.from('deudores').delete().eq('id',id);if(error){$('deudaEstado').textContent='⚠️ '+error.message;return}deudas=deudas.filter(d=>d.id!==id);saveDeudas();actualizarAvisoDeuda()}
+function actualizarAvisoDeuda(){
+ const nombre=claveCliente($('cliente').value),tel=String($('telefono').value||'').replace(/\D/g,''),mat=normalizaMatricula($('matricula').value);
+ const coincidencias=deudas.filter(d=>pendienteDeuda(d)>0 && (nombre&&claveCliente(d.cliente)===nombre || tel&&tel.length>=9&&String(d.telefono||'').replace(/\D/g,'')===tel || mat&&d.matricula===mat));
+ const aviso=$('avisoDeudaHoja');if(!aviso)return;
+ aviso.classList.toggle('hide',!coincidencias.length);
+ aviso.textContent=coincidencias.length?'🔴 CLIENTE CON DEUDA PENDIENTE: '+euros(coincidencias.reduce((a,d)=>a+pendienteDeuda(d),0))+' · Consulta Deudores.':'';
+}
+function renderDeudas(){
+ const activas=deudas.filter(d=>pendienteDeuda(d)>0);
+ $('totalDeuda').textContent=euros(activas.reduce((a,d)=>a+pendienteDeuda(d),0));
+ $('listaDeudores').innerHTML=activas.length?activas.map(d=>`<div class="item"><b>${escHtml(d.cliente)}</b> · <b style="color:#b42318">${euros(pendienteDeuda(d))}</b><div>${escHtml(d.fecha)} · ${escHtml(d.matricula||'Sin matrícula')}</div><div>${escHtml(d.concepto||'Sin concepto')}</div><div class="small">Original: ${euros(d.total)} · Abonado: ${euros(d.total-pendienteDeuda(d))}</div><div class="actions"><button class="green" onclick="registrarPagoDeuda(${d.id})">💶 REGISTRAR COBRO</button><button class="light" onclick="borrarDeuda(${d.id})">🗑️ BORRAR</button></div></div>`).join(''):'<div>✅ No hay deudas pendientes registradas en este navegador.</div>';
+}
+['cliente','telefono','matricula'].forEach(k=>$(k).addEventListener('input',actualizarAvisoDeuda));
+
+
+// ===== SINCRONIZACIÓN DE DEUDORES =====
+async function cargarDeudasRemotas(){
+ deudasRemotas=false;
+ const {data,error}=await sb.from('deudores').select('*').order('id',{ascending:false});
+ if(error){$('deudaSync').textContent='⚠️ Deudores NO sincronizados: '+error.message;return}
+ deudas=(data||[]).map(x=>({id:Number(x.id),hojaId:x.hoja_id==null?null:Number(x.hoja_id),cliente:x.cliente||'',telefono:x.telefono||'',matricula:x.matricula||'',fecha:x.fecha||'',concepto:x.concepto||'',total:Number(x.total||0),pagos:Array.isArray(x.pagos)?x.pagos:[]}));
+ deudasRemotas=true;
+ $('deudaSync').textContent='☁️ Deudores sincronizados entre dispositivos.';
+ $('importacionDeudas').textContent=Array.isArray(deudasAntiguas)&&deudasAntiguas.length?deudasAntiguas.length+' registros locales detectados. Puedes importarlos una sola vez; comprueba antes que no estén duplicados.':'No hay deudas antiguas en este navegador.';
+ actualizarAvisoDeuda();renderDeudas();
+}
+async function guardarDeudaRemota(d){
+ if(!deudasRemotas||!sb||!user){$('deudaEstado').textContent='⚠️ Deudores sin sincronización. No se ha guardado. Activa la tabla en Supabase.';return false}
+ const fila={id:d.id,user_id:user.id,hoja_id:d.hojaId||null,cliente:d.cliente,telefono:d.telefono||'',matricula:d.matricula||'',fecha:d.fecha||hoy(),concepto:d.concepto||'',total:d.total,pagos:d.pagos||[]};
+ const {error}=await sb.from('deudores').upsert(fila);
+ if(error){$('deudaEstado').textContent='⚠️ No se guardó la deuda: '+error.message;return false}
+ const i=deudas.findIndex(x=>x.id===d.id);if(i>=0)deudas[i]=d;else deudas.unshift(d);
+ saveDeudas();actualizarAvisoDeuda();$('deudaEstado').textContent='✅ Deuda guardada y sincronizada.';return true;
+}
+async function importarDeudasLocales(){
+ if(!deudasRemotas){$('deudaEstado').textContent='⚠️ Activa primero la sincronización de Deudores.';return}
+ const antiguas=Array.isArray(deudasAntiguas)?deudasAntiguas:[];
+ const pendientes=antiguas.filter(d=>!deudas.some(r=>r.id===d.id||d.hojaId&&r.hojaId===d.hojaId));
+ if(!pendientes.length){alert('No hay deudas antiguas nuevas para importar.');return}
+ if(!confirm('¿Importar '+pendientes.length+' deudas antiguas? Comprueba que no estén ya anotadas con otro identificador.'))return;
+ let n=0;for(const d of pendientes){if(await guardarDeudaRemota(d))n++;else break}
+ $('deudaEstado').textContent='Importadas '+n+' de '+pendientes.length+' deudas. Revisa los importes.';
+}
+
 // ===== AGENDA =====
 // Las citas permanecen en este dispositivo hasta habilitar la tabla agenda en Supabase.
 async function cargarAgendaRemota(){
@@ -549,7 +689,7 @@ async function cambiarEstadoCita(id,estado){
 }
 function crearHojaDesdeCita(id){
   const x=db.agenda.find(a=>a.id===id);if(!x)return;
-  $('editId').value='';$('agendaOrigen').value=String(id);
+  $('editId').value='';$('agendaOrigen').value=String(id);cargarCobroHoja(null);
   $('fecha').value=hoy();$('cliente').value=x.cliente;$('telefono').value=x.telefono;
   $('matricula').value=x.matricula;$('vehiculo').value=x.vehiculo;
   $('km').value='';$('direccion').value='';$('trabajo').value=x.trabajo;$('obs').value='';
@@ -583,6 +723,7 @@ function renderAgenda(){
 
 function render(){
   renderAgenda();
+  renderDeudas();
   $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   const abiertas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   $('numAbiertas').textContent=abiertas.length;
