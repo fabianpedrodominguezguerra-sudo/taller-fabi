@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.31 PRUEBAS</title>
+<title>Taller Fabi v0.33 PRUEBAS</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -27,16 +27,16 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 .item{border:1px solid #dce5ef;border-radius:10px;padding:10px;margin:7px 0}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}
 .hide{display:none!important}
-.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #cbd6e2;display:grid;grid-template-columns:repeat(4,1fr);z-index:99;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
-.nav button{border-radius:0;margin:0;padding:18px 8px;font-size:18px}
+.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #cbd6e2;display:grid;grid-template-columns:repeat(5,1fr);z-index:99;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+.nav button{border-radius:0;margin:0;padding:15px 2px;font-size:13px}
 .nav .cajaBtn{background:#16844f}
 .sectionTitle{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .badge{background:#16844f;color:#fff;padding:6px 10px;border-radius:999px;font-weight:700}
-.topTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.topTabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
 .topTabs button{padding:12px}
 .loginCard{max-width:520px;margin:30px auto}
 .small{font-size:12px;color:#667085}.listadoResumen{background:#eef3f8;border-radius:10px;padding:10px;margin:8px 0;font-weight:700}.listadoFila{border-bottom:1px solid #dce5ef;padding:8px 0}
-#listaAbiertas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+#listaAbiertas{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
 .trabajoAbierto{border:1px solid #dce5ef;border-radius:12px;padding:11px;background:#f8fbff;min-width:0}
 .trabajoAbierto .fechaEntrada{font-size:12px;color:#667085;margin-bottom:5px}
 .trabajoAbierto .clienteAbierto{font-weight:800;margin-bottom:5px}
@@ -79,7 +79,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.31 · PRUEBAS DEUDORES SINCRONIZADOS</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.34 · PRUEBAS BUSCADOR DE ÓRDENES</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -101,6 +101,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
   <div class="topTabs">
     <button onclick="mostrar('hojas')">🔧 HOJAS DE TRABAJO</button>
     <button onclick="mostrar('agenda')">📅 AGENDA</button>
+    <button onclick="mostrar('historial')">🗄️ HISTORIAL</button>
     <button class="green" onclick="mostrar('caja')">💰 CAJA</button><button onclick="mostrar('deudores')">🔴 DEUDORES</button>
   </div>
 
@@ -136,8 +137,12 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
   <button class="green" style="margin-top:10px" onclick="guardarHoja()">💾 GUARDAR HOJA</button>
   </div>
 
-  <div class="card"><div class="sectionTitle"><h3>📋 LISTADO DE HOJAS ABIERTAS</h3><span id="numAbiertas" class="badge">0</span></div><div id="listaAbiertas"></div><button style="margin-top:10px" onclick="imprimirHojasAbiertas()">🖨️ IMPRIMIR HOJAS ABIERTAS</button></div>
-<div class="card"><h3>Hojas guardadas</h3><div id="lista"></div></div>
+  <div class="card"><div class="sectionTitle"><h3>📋 ÓRDENES DE TRABAJO</h3><span id="numAbiertas" class="badge">0</span></div><div class="small">Trabajos pendientes, ordenados por fecha de Agenda. Al terminar se conservan en Historial.</div><label>Buscar orden por cliente, matrícula o vehículo</label><input id="buscarOrdenes" placeholder="Escribe cliente, matrícula o vehículo" oninput="render()"><div id="listaAbiertas"></div><button style="margin-top:10px" onclick="imprimirHojasAbiertas()">🖨️ IMPRIMIR HOJAS ABIERTAS</button></div>
+</section>
+  <section id="historial" class="hide">
+    <div class="card"><h2>🗄️ HISTORIAL DE TRABAJOS</h2>
+    <label>Buscar por cliente o matrícula</label><input id="buscarHistorial" placeholder="Escribe nombre o matrícula" oninput="renderHistorial()">
+    <div id="resumenHistorial" class="listadoResumen"></div><div id="lista"></div></div>
   </section>
 
   <section id="agenda" class="hide">
@@ -210,6 +215,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <nav class="nav">
 <button onclick="mostrar('hojas')">🔧 HOJAS</button>
 <button onclick="mostrar('agenda')">📅 AGENDA</button>
+    <button onclick="mostrar('historial')">🗄️ HISTORIAL</button>
 <button class="cajaBtn" onclick="mostrar('caja')">💰 CAJA</button><button onclick="mostrar('deudores')">🔴 DEUDAS</button>
 </nav>
 
@@ -275,6 +281,7 @@ function mostrar(sec){
   $('hojas').classList.toggle('hide',sec!=='hojas');
   $('caja').classList.toggle('hide',sec!=='caja');
   $('agenda').classList.toggle('hide',sec!=='agenda');
+  $('historial').classList.toggle('hide',sec!=='historial');
    $('deudores').classList.toggle('hide',sec!=='deudores');
   window.scrollTo(0,0);
   render();
@@ -721,17 +728,54 @@ function renderAgenda(){
   $('agendaLista').innerHTML=a.length?a.map(x=>`<div class="item"><b>${escHtml(x.cliente)}</b> · ${escHtml(x.estado)}<div>🚗 ${escHtml(x.matricula)} · ${escHtml(x.vehiculo)}</div><div>🔧 ${escHtml(x.trabajo)}</div><div class="actions"><button class="light" onclick="editarCita(${x.id})">✏️ CAMBIAR DÍA / EDITAR</button><button onclick="crearHojaDesdeCita(${x.id})">🔧 CREAR HOJA</button><button class="light" onclick="borrarCita(${x.id})">🗑️ BORRAR</button>${x.estado==='En taller'?'<button class="green" disabled>EN TALLER</button>':''}</div></div>`).join(''):'<div class="small">No hay citas para este día.</div>';
 }
 
+function editarCitaDesdeOrden(id){mostrar('agenda');editarCita(id)}
+async function archivarOrden(id,citaId){
+  const x=db.trabajos.find(t=>t.id===id);
+  if(!x||!confirm('¿Terminar y archivar el trabajo de '+x.cliente+'? La hoja y sus deudas se conservarán.'))return;
+  if(REMOTE_CONFIGURED&&sb&&user){
+    const {error}=await sb.from('trabajos').update({estado:'Terminado'}).eq('id',id);
+    if(error){alert('No se ha archivado: '+error.message);return}
+  }
+  x.estado='Terminado';
+  if(citaId){await cambiarEstadoCita(citaId,'Terminado')}
+  saveLocal();
+  alert('Trabajo archivado en Historial.');
+}
+function renderHistorial(){
+  const q=String($('buscarHistorial').value||'').trim().toLocaleLowerCase('es');
+  const terminadas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='terminado')
+    .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const visibles=terminadas.filter(x=>!q||[x.cliente,x.matricula].some(v=>String(v||'').toLocaleLowerCase('es').includes(q)));
+  $('resumenHistorial').textContent=visibles.length+' de '+terminadas.length+' trabajos archivados';
+  $('lista').innerHTML=visibles.length?visibles.map(x=>`<div class="item"><b>${escHtml(x.fecha)} · ${escHtml(x.cliente)}</b><div>${escHtml(x.matricula||'')} · ${escHtml(x.vehiculo||'')}</div><div>${escHtml(x.trabajo)}</div><div class="actions"><button onclick="editar(${x.id})">✏️ CONSULTAR / MODIFICAR</button><button onclick="imprimirHoja(${x.id})">🖨️ IMPRIMIR</button></div><div class="small">Archivado · Las deudas se conservan</div></div>`).join(''):'<div>No hay trabajos archivados que coincidan con la búsqueda.</div>';
+}
 function render(){
   renderAgenda();
   renderDeudas();
   $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
-  const abiertas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  $('numAbiertas').textContent=abiertas.length;
-  $('listaAbiertas').innerHTML=abiertas.length?abiertas.map(x=>{const p=prioridadDe(x);return `<div class="trabajoAbierto prio-${p}"><div class="fechaEntrada">📅 Entrada: ${escHtml(x.fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula)}${x.matricula&&x.vehiculo?' · ':''}${escHtml(x.vehiculo)}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div><button class="light" style="margin-top:9px;padding:9px;font-size:13px" onclick="pasarHojaAgenda(${x.id})">📅 PASAR A AGENDA</button><div class="prioridadLinea">Prioridad: <select class="prio-${p}" onchange="cambiarPrioridad(${x.id},this.value)"><option value="Alta" ${p==='Alta'?'selected':''}>🔴 Alta</option><option value="Normal" ${p==='Normal'?'selected':''}>🟡 Normal</option><option value="Baja" ${p==='Baja'?'selected':''}>🟢 Baja</option></select></div></div>`}).join(''):'<div>✅ No hay hojas abiertas.</div>';
+  const abiertas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()!=='terminado');
+  const citasPendientes=db.agenda.filter(x=>x.estado!=='Terminado');
+  const ordenes=[];
+  const emparejadas=new Set();
+  const clave=s=>String(s||'').trim().toLowerCase();
+  for(const c of citasPendientes){
+    const h=abiertas.find(x=>!emparejadas.has(x.id)&&((c.matricula&&x.matricula&&clave(c.matricula)===clave(x.matricula))||(!c.matricula&&!x.matricula&&clave(c.cliente)===clave(x.cliente)&&clave(c.trabajo)===clave(x.trabajo))));
+    if(h)emparejadas.add(h.id);
+    ordenes.push({c,h,fecha:c.fecha||h?.fecha||''});
+  }
+  for(const h of abiertas)if(!emparejadas.has(h.id))ordenes.push({c:null,h,fecha:h.fecha||''});
+  ordenes.sort((a,b)=>a.fecha.localeCompare(b.fecha)||Number(a.c?.id||a.h?.id)-Number(b.c?.id||b.h?.id));
+  const qOrden=String($('buscarOrdenes').value||'').trim().toLocaleLowerCase('es');
+  const filtradas=ordenes.filter(({c,h})=>!qOrden||[c?.cliente,h?.cliente,c?.matricula,h?.matricula,c?.vehiculo,h?.vehiculo,c?.trabajo,h?.trabajo].some(v=>String(v||'').toLocaleLowerCase('es').includes(qOrden)));
+  $('numAbiertas').textContent=filtradas.length===ordenes.length?String(ordenes.length):filtradas.length+' / '+ordenes.length;
+  $('listaAbiertas').innerHTML=filtradas.length?filtradas.map(({c,h,fecha})=>{
+    const x=h||c,p=h?prioridadDe(h):'Normal';
+    return `<div class="trabajoAbierto prio-${p}"><div class="fechaEntrada">📅 ${c?'Agenda':'Sin cita · Entrada'}: ${escHtml(fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula||'')} · ${escHtml(x.vehiculo||'')}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div><div class="small">${c?'Cita: '+escHtml(c.estado):'Hoja sin cita'}${h?' · Hoja abierta':''}</div><div class="actions">${h?`<button class="light" onclick="editar(${h.id})">✏️ ABRIR HOJA</button>`:`<button onclick="crearHojaDesdeCita(${c.id})">🔧 CREAR HOJA</button>`}${c?`<button class="light" onclick="editarCitaDesdeOrden(${c.id})">📅 CAMBIAR FECHA</button>`:`<button class="light" onclick="pasarHojaAgenda(${h.id})">📅 AGENDAR</button>`}</div>${h?`<button class="green" style="margin-top:7px" onclick="archivarOrden(${h.id},${c?.id||'null'})">✅ TERMINAR Y ARCHIVAR</button>`:'<div class="small">Crea la hoja para poder terminar y archivar este trabajo.</div>'}</div>`
+  }).join(''):'<div>✅ No hay órdenes que coincidan con la búsqueda.</div>';
   const cm=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
   $('resumenCajaMes').innerHTML=`Entradas: ${dinero(cm.entradas)} · Salidas: ${dinero(cm.salidas)} · Resultado: ${dinero(cm.resultado)}`;
   $('listaCajaMes').innerHTML=cm.a.length?cm.a.map(x=>`<div class="listadoFila"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'➕':'➖'} ${dinero(x.importe)}</b><div>${escHtml(x.concepto)}</div></div>`).join(''):'<div>Sin movimientos en este mes.</div>';
-  $('lista').innerHTML=db.trabajos.length?db.trabajos.map(x=>`<div class="item"><b>${x.fecha} · ${x.cliente}</b><div>${x.matricula||''} · ${x.vehiculo||''}</div><div>${x.trabajo}</div><div class="actions"><button onclick="editar(${x.id})">✏️ MODIFICAR</button><button class="light" onclick="pasarHojaAgenda(${x.id})">📅 PASAR A AGENDA</button><button onclick="imprimirHoja(${x.id})">🖨️ IMPRIMIR</button><button class="light" onclick="eliminarHoja(${x.id})">🗑️ BORRAR</button></div><div style="margin-top:6px"><button class="light">${x.estado}</button></div></div>`).join(''):'<div>Sin hojas guardadas.</div>';
+  renderHistorial();
   $('movs').innerHTML=db.mov.length?db.mov.map(x=>`<div class="item"><b>${x.fecha} · ${x.tipo==='entrada'?'➕':'➖'} ${Number(x.importe).toFixed(2)} €</b><div>${x.concepto}</div><div class="actions"><button class="light" onclick="eliminarCaja(${x.id})">🗑️ BORRAR</button></div></div>`).join(''):'<div>Sin movimientos.</div>';
 }
 init();
