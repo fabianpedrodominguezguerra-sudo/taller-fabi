@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Taller Fabi v0.33 PRUEBAS</title>
+<title>Taller Fabi v0.35 PRUEBAS</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -79,7 +79,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
 <body>
 <header>
   <div class="headerRow">
-    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.34 · PRUEBAS BUSCADOR DE ÓRDENES</div></div>
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.35 · IMPRESIÓN DE HOJAS Y AGENDA</div></div>
     <div id="syncBadge" class="syncBadge">💾 Local</div>
   </div>
 </header>
@@ -135,6 +135,7 @@ button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-w
   <label>Prioridad</label><select id="prioridad"><option>Normal</option><option>Alta</option><option>Baja</option></select>
   <input id="editId" type="hidden"><input id="agendaOrigen" type="hidden">
   <button class="green" style="margin-top:10px" onclick="guardarHoja()">💾 GUARDAR HOJA</button>
+   <button class="light" style="margin-top:8px" onclick="imprimirHojaActual()">🖨️ IMPRIMIR ESTA HOJA</button>
   </div>
 
   <div class="card"><div class="sectionTitle"><h3>📋 ÓRDENES DE TRABAJO</h3><span id="numAbiertas" class="badge">0</span></div><div class="small">Trabajos pendientes, ordenados por fecha de Agenda. Al terminar se conservan en Historial.</div><label>Buscar orden por cliente, matrícula o vehículo</label><input id="buscarOrdenes" placeholder="Escribe cliente, matrícula o vehículo" oninput="render()"><div id="listaAbiertas"></div><button style="margin-top:10px" onclick="imprimirHojasAbiertas()">🖨️ IMPRIMIR HOJAS ABIERTAS</button></div>
@@ -493,6 +494,38 @@ function editar(id){
   $('obs').value=obsLimpias(x.obs); $('prioridad').value=prioridadDe(x); cargarCobroHoja(id);
   mostrar('hojas'); actualizarAvisoDeuda(); $('vozEstado').textContent='✏️ Modifica lo necesario y pulsa GUARDAR HOJA.';
 }
+function imprimirHojaActual(){
+  const campos=['fecha','cliente','telefono','matricula','vehiculo','km','direccion','trabajo','obs','estado'];
+  const x=Object.fromEntries(campos.map(k=>[k,$(k).value]));
+  x.obs=obsConPrioridad(x.obs,$('prioridad').value);
+  imprimirDatosHoja(x);
+}
+function imprimirCita(id){
+  const c=db.agenda.find(x=>x.id===id);
+  if(!c)return;
+  imprimirDatosHoja({fecha:c.fecha,cliente:c.cliente,telefono:c.telefono,matricula:c.matricula,
+    vehiculo:c.vehiculo,km:'',direccion:'',trabajo:c.trabajo,
+    obs:'Cita de agenda · '+(c.estado||'Pendiente'),estado:'Cita programada'});
+}
+function imprimirDatosHoja(x){
+  let area=$('printArea');
+  if(!area){area=document.createElement('div');area.id='printArea';document.body.appendChild(area)}
+  const e=v=>escHtml(v||'');
+  area.innerHTML=`<div class="printSheet"><h1>HOJA DE TRABAJO · TALLER FABI DOMÍNGUEZ</h1><div class="printGrid">
+  <div class="printRow"><span class="printLabel">Fecha:</span> ${e(x.fecha)}</div>
+  <div class="printRow"><span class="printLabel">Estado:</span> ${e(x.estado)}</div>
+  <div class="printRow"><span class="printLabel">Prioridad:</span> ${e(prioridadDe(x))}</div>
+  <div class="printRow"><span class="printLabel">Cliente:</span> ${e(x.cliente)}</div>
+  <div class="printRow"><span class="printLabel">Teléfono:</span> ${e(x.telefono)}</div>
+  <div class="printRow"><span class="printLabel">Matrícula:</span> ${e(x.matricula)}</div>
+  <div class="printRow"><span class="printLabel">Vehículo:</span> ${e(x.vehiculo)}</div>
+  <div class="printRow"><span class="printLabel">Kilómetros:</span> ${e(x.km)}</div>
+  <div class="printRow"><span class="printLabel">Dirección:</span> ${e(x.direccion)}</div>
+  <div class="printRow printFull"><span class="printLabel">Trabajos a realizar:</span><br>${e(x.trabajo).replace(/\\n/g,'<br>')}</div>
+  <div class="printRow printFull"><span class="printLabel">Observaciones:</span><br>${e(obsLimpias(x.obs)).replace(/\\n/g,'<br>')}</div>
+  </div></div>`;
+  setTimeout(()=>window.print(),50);
+}
 function imprimirHoja(id){
   const x=db.trabajos.find(a=>a.id===id); if(!x)return;
   let area=$('printArea');
@@ -725,7 +758,7 @@ function renderAgenda(){
   const a=db.agenda.filter(x=>x.fecha===fecha).sort((x,y)=>Number(x.id)-Number(y.id));
   const pendientes=db.agenda.filter(x=>x.estado==='Pendiente').length;
   $('agendaResumen').textContent=a.length+' citas para este día · '+pendientes+' pendientes en total';
-  $('agendaLista').innerHTML=a.length?a.map(x=>`<div class="item"><b>${escHtml(x.cliente)}</b> · ${escHtml(x.estado)}<div>🚗 ${escHtml(x.matricula)} · ${escHtml(x.vehiculo)}</div><div>🔧 ${escHtml(x.trabajo)}</div><div class="actions"><button class="light" onclick="editarCita(${x.id})">✏️ CAMBIAR DÍA / EDITAR</button><button onclick="crearHojaDesdeCita(${x.id})">🔧 CREAR HOJA</button><button class="light" onclick="borrarCita(${x.id})">🗑️ BORRAR</button>${x.estado==='En taller'?'<button class="green" disabled>EN TALLER</button>':''}</div></div>`).join(''):'<div class="small">No hay citas para este día.</div>';
+  $('agendaLista').innerHTML=a.length?a.map(x=>`<div class="item"><b>${escHtml(x.cliente)}</b> · ${escHtml(x.estado)}<div>🚗 ${escHtml(x.matricula)} · ${escHtml(x.vehiculo)}</div><div>🔧 ${escHtml(x.trabajo)}</div><div class="actions"><button class="light" onclick="editarCita(${x.id})">✏️ CAMBIAR DÍA / EDITAR</button><button onclick="imprimirCita(${x.id})">🖨️ IMPRIMIR HOJA</button><button class="light" onclick="borrarCita(${x.id})">🗑️ BORRAR</button>${x.estado==='En taller'?'<button class="green" disabled>EN TALLER</button>':''}</div></div>`).join(''):'<div class="small">No hay citas para este día.</div>';
 }
 
 function editarCitaDesdeOrden(id){mostrar('agenda');editarCita(id)}
