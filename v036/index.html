@@ -1,1 +1,871 @@
-Taller Fabi v0.36 - En preparación
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Taller Fabi v0.36 · DEMOSTRACIÓN SEGURA</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172238}
+header{background:#17365d;color:#fff;padding:14px 15px;position:sticky;top:0;z-index:5}
+header b{font-size:20px}
+.headerRow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.syncBadge{font-size:12px;background:#fff2;border:1px solid #ffffff55;padding:6px 9px;border-radius:999px}
+main{max-width:850px;margin:auto;padding:12px 12px 110px}
+.card{background:#fff;border:1px solid #dce5ef;border-radius:15px;padding:14px;margin-bottom:11px}
+h2,h3{margin:0 0 10px}
+label{display:block;font-size:13px;color:#566274;margin:8px 0 4px}
+input,textarea,select{width:100%;padding:11px;border:1px solid #cbd6e2;border-radius:9px;font-size:16px}
+button{width:100%;border:0;border-radius:10px;padding:13px;font-size:16px;font-weight:800;background:#1769c2;color:#fff;cursor:pointer}
+.green{background:#16844f}.light{background:#eaf0f7;color:#17365d}.red{background:#b42318}.orange{background:#b86a00}
+.field{display:grid;grid-template-columns:1fr 54px;gap:6px;align-items:end}
+.mic{font-size:20px;padding:11px 3px;background:#eaf0f7;color:#17365d}
+.status{background:#eef3f8;padding:10px;border-radius:9px;margin:8px 0;font-weight:700}
+.live{background:#fff7e6;border:2px solid #f0b429;padding:12px;border-radius:10px;margin:8px 0;min-height:54px;font-size:18px}
+.metric{font-size:31px;font-weight:800}
+.item{border:1px solid #dce5ef;border-radius:10px;padding:10px;margin:7px 0}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}
+.hide{display:none!important}
+.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #cbd6e2;display:grid;grid-template-columns:repeat(5,1fr);z-index:99;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+.nav button{border-radius:0;margin:0;padding:15px 2px;font-size:13px}
+.nav .cajaBtn{background:#16844f}
+.sectionTitle{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{background:#16844f;color:#fff;padding:6px 10px;border-radius:999px;font-weight:700}
+.topTabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+.topTabs button{padding:12px}
+.loginCard{max-width:520px;margin:30px auto}
+.small{font-size:12px;color:#667085}.listadoResumen{background:#eef3f8;border-radius:10px;padding:10px;margin:8px 0;font-weight:700}.listadoFila{border-bottom:1px solid #dce5ef;padding:8px 0}
+#listaAbiertas{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+.trabajoAbierto{border:1px solid #dce5ef;border-radius:12px;padding:11px;background:#f8fbff;min-width:0}
+.trabajoAbierto .fechaEntrada{font-size:12px;color:#667085;margin-bottom:5px}
+.trabajoAbierto .clienteAbierto{font-weight:800;margin-bottom:5px}
+.trabajoAbierto .vehiculoAbierto{font-size:14px;margin-bottom:7px}
+.trabajoAbierto .trabajoTexto{font-size:14px;line-height:1.35}
+.prioridadLinea{margin-top:9px;padding-top:8px;border-top:1px solid #dce5ef;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700}
+.prioridadLinea select{width:auto;min-width:105px;padding:5px 7px;margin:0;font-weight:700}
+.trabajoAbierto.prio-Alta{border:3px solid #dc2626;background:#fff5f5}
+.trabajoAbierto.prio-Normal{border:3px solid #eab308;background:#fffbea}
+.trabajoAbierto.prio-Baja{border:3px solid #16a34a;background:#f2fff5}
+.prioridadLinea select.prio-Alta{background:#dc2626;color:white;border-color:#dc2626}
+.prioridadLinea select.prio-Normal{background:#eab308;color:#111827;border-color:#eab308}
+.prioridadLinea select.prio-Baja{background:#16a34a;color:white;border-color:#16a34a}
+
+
+@media(max-width:799px) and (min-width:520px){#listaAbiertas{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:519px){#listaAbiertas{grid-template-columns:1fr}}
+
+@media(min-width:800px){
+  .nav{display:none}
+  main{padding-bottom:30px}
+}
+@media(max-width:799px){
+  .topTabs{display:none}
+}
+#printArea{display:none}
+@media print{
+  body{background:#fff}
+  body > *:not(#printArea){display:none!important}
+  #printArea{display:block!important}
+}
+.printSheet{font-family:Arial,sans-serif;color:#000;padding:18mm 15mm}
+.printSheet h1{font-size:22px;margin:0 0 14px;text-align:center}
+.printGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
+.printRow{margin-bottom:8px}
+.printLabel{font-weight:700}
+.printFull{grid-column:1/-1}
+
+.demoNotice{max-width:850px;margin:0 auto 12px;background:#fff4d6;color:#815300;border:1px solid #f2cc68;border-radius:12px;padding:12px;font-size:13px;font-weight:700}
+.dashboard h1{margin:6px 0;font-size:29px}.dashboard p{margin:7px 0;color:#58677b}.eyebrow{font-size:11px;letter-spacing:1.2px;font-weight:800;color:#2869a9}
+.welcome{background:linear-gradient(120deg,#eaf3ff,#fff);border:1px solid #d7e7f8;border-radius:16px;padding:20px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:15px}.welcome button{max-width:180px}
+.dashGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px}.dashTile{background:white;color:#172238;text-align:left;border:1px solid #dce5ef;box-shadow:0 4px 12px #102f4c0c;padding:19px;display:flex;flex-direction:column;gap:9px;min-height:145px}.dashTile span{font-size:13px;color:#53647b}.dashTile strong{font-size:29px}.dashTile small{color:#1769c2;font-weight:700}.dashTile:hover,.dashLine:hover{outline:2px solid #1769c2}
+.miniBtn{width:auto;padding:8px 10px;font-size:12px;background:#eaf0f7;color:#17365d}.dashLine{background:#f7faff;color:#172238;text-align:left;display:flex;flex-direction:column;gap:4px;margin:8px 0;padding:13px;border:1px solid #dce5ef}.dashLine.urgent{background:#fff5f5;border-left:5px solid #dc2626}.dashLine small{font-size:13px;font-weight:400}.quickGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px}.quickGrid button{padding:14px 5px;font-size:13px}
+.topTabs{grid-template-columns:repeat(6,1fr)}.nav{grid-template-columns:repeat(6,1fr)}.nav button{font-size:11px;padding:15px 0}
+@media(min-width:1000px){main{max-width:1100px}.demoNotice{max-width:1100px}.dashGrid{grid-template-columns:repeat(4,minmax(0,1fr))}.welcome{padding:26px}}
+@media(max-width:550px){.welcome{display:block}.welcome button{max-width:100%;margin-top:10px}.dashTile{padding:13px;min-height:125px}.dashTile strong{font-size:23px}.dashboard h1{font-size:24px}.quickGrid button{font-size:12px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="headerRow">
+    <div><b>TALLER FABI DOMÍNGUEZ</b><div style="font-size:12px">v0.36 · DEMOSTRACIÓN · DATOS FICTICIOS</div></div>
+    <div id="syncBadge" class="syncBadge">💾 Local</div>
+  </div>
+</header>
+
+<main>
+<div id="loginScreen" class="hide">
+  <div class="card loginCard">
+    <h2>🔐 Acceso al taller</h2>
+    <div class="small">Usa la misma cuenta en móvil y ordenador para ver los mismos datos.</div>
+    <label>Correo electrónico</label><input id="loginEmail" type="email">
+    <label>Contraseña</label><input id="loginPass" type="password">
+    <button class="green" style="margin-top:10px" onclick="iniciarSesion()">ENTRAR</button>
+    <button class="light" style="margin-top:8px" onclick="crearCuenta()">CREAR CUENTA</button>
+    <div id="loginEstado" class="status">Introduce correo y contraseña.</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="demoNotice">🧪 VERSIÓN DE PRUEBAS · Datos inventados · No conecta con Supabase ni modifica la v0.35.</div>
+  <section id="inicio" class="dashboard">
+    <div class="welcome"><div><div class="eyebrow">PANEL DE CONTROL · TALLER FABI</div><h1>Buenos días 👋</h1><p>Tu taller, de un vistazo. Pulsa cualquier tarjeta para entrar.</p></div><button class="green" onclick="mostrar('hojas')">➕ NUEVA HOJA</button></div>
+    <div class="dashGrid">
+      <button class="dashTile" onclick="mostrar('hojas')"><span>🔧 TRABAJOS ABIERTOS</span><strong id="dashAbiertos">0</strong><small>Ver hojas pendientes →</small></button>
+      <button class="dashTile" onclick="mostrar('agenda')"><span>📅 CITAS DE HOY</span><strong id="dashCitas">0</strong><small>Consultar agenda →</small></button>
+      <button class="dashTile" onclick="mostrar('caja')"><span>💰 CAJA DE HOY</span><strong id="dashCaja">0,00 €</strong><small>Ver movimientos →</small></button>
+      <button class="dashTile" onclick="mostrar('deudores')"><span>🔴 PENDIENTE DE COBRO</span><strong id="dashDeudas">0,00 €</strong><small>Ver deudores →</small></button>
+    </div>
+    <div class="card"><div class="sectionTitle"><h2>🔴 Trabajos urgentes</h2><button class="miniBtn" onclick="mostrar('hojas')">VER TODOS →</button></div><div id="dashUrgentes"></div></div>
+    <div class="card"><div class="sectionTitle"><h2>📅 Agenda de hoy</h2><button class="miniBtn" onclick="mostrar('agenda')">ABRIR AGENDA →</button></div><div id="dashAgenda"></div></div>
+    <div class="quickGrid"><button onclick="mostrar('historial')">🗄️ HISTORIAL</button><button onclick="mostrar('caja')">💰 CAJA</button><button onclick="mostrar('deudores')">🔴 DEUDORES</button></div>
+  </section>
+  <div class="topTabs">
+    <button class="light" onclick="mostrar('inicio')">🏠 INICIO</button>
+    <button onclick="mostrar('hojas')">🔧 HOJAS DE TRABAJO</button>
+    <button onclick="mostrar('agenda')">📅 AGENDA</button>
+    <button onclick="mostrar('historial')">🗄️ HISTORIAL</button>
+    <button class="green" onclick="mostrar('caja')">💰 CAJA</button><button onclick="mostrar('deudores')">🔴 DEUDORES</button>
+  </div>
+
+  <section id="hojas" class="hide">
+  <div class="card">
+  <div class="sectionTitle"><h2>🔧 HOJA DE TRABAJO</h2><span class="badge">HOJAS</span></div>
+  <button class="green" onclick="dictarHojaCompleta()">🎤 DICTAR HOJA ENTERA</button>
+  <div id="vozEstado" class="status">Pulsa una vez y dicta todos los datos seguidos.</div>
+  <div id="vozLive" class="live">Aquí irán apareciendo las palabras mientras hablas.</div>
+
+  <label>Fecha</label><input id="fecha" type="date">
+  <label>Cliente</label><div class="field"><input id="cliente"><button class="mic" onclick="dictarCampo('cliente')">🎤</button></div>
+  <label>Teléfono</label><div class="field"><input id="telefono" inputmode="numeric"><button class="mic" onclick="dictarCampo('telefono')">🎤</button></div>
+  <label>Matrícula</label><div class="field"><input id="matricula"><button class="mic" onclick="dictarCampo('matricula')">🎤</button></div>
+  <label>Vehículo</label><div class="field"><input id="vehiculo"><button class="mic" onclick="dictarCampo('vehiculo')">🎤</button></div>
+  <label>Kilómetros</label><div class="field"><input id="km" inputmode="numeric"><button class="mic" onclick="dictarCampo('km')">🎤</button></div>
+  <label>Dirección</label><div class="field"><input id="direccion"><button class="mic" onclick="dictarCampo('direccion')">🎤</button></div>
+  <label>Trabajos a realizar</label><div class="field"><textarea id="trabajo" rows="4"></textarea><button class="mic" onclick="dictarCampo('trabajo')">🎤</button></div>
+  <label>Observaciones</label><textarea id="obs" rows="3"></textarea>
+  <div style="background:#f0f7ff;border:1px solid #cbd6e2;padding:12px;border-radius:10px;margin-top:12px">
+    <h3>💶 Importe y cobro del trabajo</h3>
+    <label>Descripción para el cobro</label><textarea id="cobroDescripcion" rows="2" placeholder="Ej.: Cambio de alternador"></textarea>
+    <label>Importe total (€)</label><input id="cobroTotal" inputmode="decimal" placeholder="0,00" oninput="actualizarPendienteHoja()">
+    <label>Cantidad cobrada (€)</label><input id="cobroPagado" inputmode="decimal" placeholder="0,00" oninput="actualizarPendienteHoja()">
+    <div id="cobroPendiente" class="status">Pendiente: 0,00 €</div>
+    <button type="button" class="orange" onclick="pasarActualADeudores()">🔴 PASAR A DEUDORES</button>
+    <div class="small">Primero guarda la hoja. La deuda se añadirá una sola vez por hoja; no se registra en Caja automáticamente. Los datos de cobro de la hoja se conservan en este navegador; la deuda se sincroniza al pasarla a Deudores.</div>
+  </div>
+  <div id="avisoDeudaHoja" class="status hide" style="background:#fee2e2;color:#991b1b;border:2px solid #dc2626"></div>
+   <label>Estado</label><select id="estado"><option>Abierto</option><option>Terminado</option></select>
+  <label>Prioridad</label><select id="prioridad"><option>Normal</option><option>Alta</option><option>Baja</option></select>
+  <input id="editId" type="hidden"><input id="agendaOrigen" type="hidden">
+  <button class="green" style="margin-top:10px" onclick="guardarHoja()">💾 GUARDAR HOJA</button>
+   <button class="light" style="margin-top:8px" onclick="imprimirHojaActual()">🖨️ IMPRIMIR ESTA HOJA</button>
+  </div>
+
+  <div class="card"><div class="sectionTitle"><h3>📋 ÓRDENES DE TRABAJO</h3><span id="numAbiertas" class="badge">0</span></div><div class="small">Trabajos pendientes, ordenados por fecha de Agenda. Al terminar se conservan en Historial.</div><label>Buscar orden por cliente, matrícula o vehículo</label><input id="buscarOrdenes" placeholder="Escribe cliente, matrícula o vehículo" oninput="render()"><div id="listaAbiertas"></div><button style="margin-top:10px" onclick="imprimirHojasAbiertas()">🖨️ IMPRIMIR HOJAS ABIERTAS</button></div>
+</section>
+  <section id="historial" class="hide">
+    <div class="card"><h2>🗄️ HISTORIAL DE TRABAJOS</h2>
+    <label>Buscar por cliente o matrícula</label><input id="buscarHistorial" placeholder="Escribe nombre o matrícula" oninput="renderHistorial()">
+    <div id="resumenHistorial" class="listadoResumen"></div><div id="lista"></div></div>
+  </section>
+
+  <section id="agenda" class="hide">
+    <div class="card">
+      <div class="sectionTitle"><h2>📅 AGENDA DE TRABAJOS</h2><span class="badge">CITAS</span></div>
+      <div id="agendaSync" class="status">Preparando agenda…</div>
+      <label>Ver trabajos del día</label><input id="agendaDia" type="date" onchange="renderAgenda()">
+      <div class="actions"><button class="light" onclick="moverVistaAgenda(-1)">← Día anterior</button><button class="light" onclick="moverVistaAgenda(1)">Día siguiente →</button></div>
+      <div id="agendaResumen" class="listadoResumen"></div>
+      <div id="agendaLista"></div>
+    </div>
+    <div class="card">
+      <h3 id="agendaTitulo">➕ Añadir cita</h3>
+      <input type="hidden" id="agendaEditId">
+      <label>Fecha de la cita</label><input id="agendaFecha" type="date">
+      <label>Cliente</label><input id="agendaCliente" placeholder="Nombre del cliente">
+      <label>Teléfono (opcional)</label><input id="agendaTelefono" inputmode="tel">
+      <label>Matrícula</label><input id="agendaMatricula" placeholder="Ej.: 2525ABC">
+      <label>Vehículo</label><input id="agendaVehiculo" placeholder="Marca y modelo">
+      <label>Trabajo previsto</label><textarea id="agendaTrabajo" rows="3"></textarea>
+      <button class="green" style="margin-top:10px" onclick="guardarCita()">💾 GUARDAR CITA</button>
+      <button class="light" style="margin-top:8px" onclick="limpiarCita()">LIMPIAR FORMULARIO</button>
+      <div id="agendaEstado" class="status">Las citas no crean hojas de trabajo automáticamente.</div>
+    </div>
+  </section>
+
+  <section id="caja" class="hide">
+  <div class="card">
+  <div class="sectionTitle"><h2>💰 CAJA</h2><span class="badge">CAJA</span></div>
+  <div style="font-size:13px;color:#667085">Saldo actual</div>
+  <div id="saldo" class="metric">0,00 €</div>
+
+  <button class="green" style="margin-top:10px" onclick="dictarCaja()">🎤 DICTAR MOVIMIENTO DE CAJA</button>
+  <div id="cajaEstado" class="status">Ejemplo: “entrada 70 euros Geni aire acondicionado”.</div>
+  <div id="cajaLive" class="live">Aquí irán apareciendo las palabras mientras hablas.</div>
+
+  <label>Fecha</label><input id="cfecha" type="date">
+  <label>Tipo</label><select id="tipo"><option value="entrada">Entrada</option><option value="salida">Salida</option></select>
+  <label>Importe</label><input id="importe" inputmode="decimal" placeholder="0,00">
+  <label>Concepto</label><div class="field"><input id="concepto"><button class="mic" onclick="dictarConcepto()">🎤</button></div>
+  <button class="green" style="margin-top:10px" onclick="guardarCaja()">💾 GUARDAR MOVIMIENTO</button>
+  </div>
+
+  <div class="card"><h3>📋 LISTADO DE CAJA DEL MES</h3><label>Mes</label><input id="mesCaja" type="month" onchange="render()"><div id="resumenCajaMes" class="listadoResumen"></div><div id="listaCajaMes"></div><button style="margin-top:10px" onclick="imprimirCajaMes()">🖨️ IMPRIMIR CAJA DEL MES</button></div>
+<div class="card"><h3>Movimientos de caja</h3><div id="movs"></div></div>
+  </section>
+  <section id="deudores" class="hide">
+    <div class="card">
+      <h2>🔴 DEUDORES</h2>
+      <div id="deudaSync" class="status">Comprobando sincronización…</div>
+      <div class="small">Total pendiente de cobro</div><div id="totalDeuda" class="metric" style="color:#b42318">0,00 €</div>
+      <div id="deudaEstado" class="status">Puedes añadir deudas o pasarlas desde una hoja de trabajo.</div>
+      <div id="listaDeudores"></div>
+    </div>
+    <div class="card">
+      <h3>➕ Añadir deuda manualmente</h3>
+      <label>Fecha</label><input id="deudaFecha" type="date">
+      <label>Cliente</label><input id="deudaCliente">
+      <label>Teléfono</label><input id="deudaTelefono" inputmode="tel">
+      <label>Matrícula</label><input id="deudaMatricula">
+      <label>Descripción</label><textarea id="deudaConcepto" rows="2"></textarea>
+      <label>Importe pendiente (€)</label><input id="deudaImporte" inputmode="decimal">
+      <button class="green" style="margin-top:10px" onclick="crearDeuda()">💾 GUARDAR DEUDA</button>
+    </div>
+    <div class="card"><h3>Deudas antiguas guardadas en este navegador</h3><div id="importacionDeudas" class="small"></div><button class="light" style="margin-top:8px" onclick="importarDeudasLocales()">☁️ IMPORTAR DEUDAS ANTIGUAS</button></div>
+  </section>
+</div>
+</main>
+
+<nav class="nav">
+<button onclick="mostrar('inicio')">🏠 INICIO</button>
+<button onclick="mostrar('hojas')">🔧 HOJAS</button>
+<button onclick="mostrar('agenda')">📅 AGENDA</button>
+    <button onclick="mostrar('historial')">🗄️ HISTORIAL</button>
+<button class="cajaBtn" onclick="mostrar('caja')">💰 CAJA</button><button onclick="mostrar('deudores')">🔴 DEUDAS</button>
+</nav>
+
+<script>
+const $=x=>document.getElementById(x);
+const LOCAL_KEY='taller_fabi_demo_v036_unicamente';
+
+// ===== CONFIGURACIÓN SUPABASE =====
+// Cuando tengamos el proyecto Supabase, pondremos aquí la URL y la clave pública.
+const SUPABASE_URL=''; // DEMO: sin conexión a datos reales
+const SUPABASE_ANON_KEY=''; // DEMO
+const REMOTE_CONFIGURED = false; // nunca conectar ni modificar Supabase
+
+let sb=null, user=null;
+let db=JSON.parse(localStorage.getItem(LOCAL_KEY)||'null')||{caja:370,trabajos:[],mov:[]};
+if(!Array.isArray(db.agenda))db.agenda=[];
+// Libro de deudas independiente en pruebas: no sobreescribir al cargar datos remotos.
+const DEUDAS_KEY="taller_fabi_demo_deudas_v036";
+let deudas=JSON.parse(localStorage.getItem(DEUDAS_KEY)||"[]");
+const COBROS_KEY='taller_fabi_demo_cobros_v036';
+let cobrosHoja=JSON.parse(localStorage.getItem(COBROS_KEY)||'{}')||{};
+function guardarCobroLocal(id){
+ if(!id)return;
+ cobrosHoja[id]={descripcion:$('cobroDescripcion').value,total:$('cobroTotal').value,pagado:$('cobroPagado').value};
+ localStorage.setItem(COBROS_KEY,JSON.stringify(cobrosHoja));
+}
+function cargarCobroHoja(id){
+ const c=cobrosHoja[id]||{};
+ $('cobroDescripcion').value=c.descripcion||'';
+ $('cobroTotal').value=c.total||'';
+ $('cobroPagado').value=c.pagado||'';
+ actualizarPendienteHoja();
+}
+function actualizarPendienteHoja(){
+ const t=numeroDinero($('cobroTotal').value),p=numeroDinero($('cobroPagado').value);
+ $('cobroPendiente').textContent='Pendiente: '+euros(Math.max(0,(Number.isFinite(t)?t:0)-(Number.isFinite(p)?p:0)));
+}
+async function pasarActualADeudores(){
+ const id=Number($('editId').value);
+ if(!id){alert('Primero GUARDA LA HOJA y después pulsa MODIFICAR para pasarla a Deudores.');return}
+ const x=db.trabajos.find(t=>t.id===id);
+ if(!x){alert('No se encuentra la hoja guardada.');return}
+ const total=numeroDinero($('cobroTotal').value),pagado=numeroDinero($('cobroPagado').value||'0');
+ if(!Number.isFinite(total)||total<=0||!Number.isFinite(pagado)||pagado<0||pagado>=total){alert('Indica un importe total y un cobro inferior al total.');return}
+ if(deudas.some(d=>Number(d.hojaId)===id)){alert('Esta hoja ya está en Deudores. Consulta la pestaña Deudores para registrar pagos.');return}
+ const descripcion=$('cobroDescripcion').value.trim()||x.trabajo||'Trabajo realizado';
+ if(!confirm('¿Pasar a Deudores '+x.cliente+' con '+euros(total-pagado)+' pendientes?'))return;
+ guardarCobroLocal(id);
+ const deuda={id:Date.now(),hojaId:id,cliente:x.cliente,telefono:x.telefono,matricula:x.matricula,fecha:x.fecha||hoy(),concepto:descripcion,total:Math.round(total*100)/100,pagos:pagado>0?[{fecha:hoy(),importe:Math.round(pagado*100)/100,nota:'Cobrado previamente en hoja'}]:[]};
+ if(await guardarDeudaRemota(deuda)){mostrar('deudores');alert('Deuda sincronizada. Los cobros NO se pasan automáticamente a Caja.')}
+}
+if(!Array.isArray(deudas))deudas=[];
+let agendaRemota=false, deudasRemotas=false;
+const deudasAntiguas=JSON.parse(localStorage.getItem(DEUDAS_KEY)||'[]');
+
+const hoy=()=>new Date().toISOString().slice(0,10);
+$('fecha').value=$('cfecha').value=hoy();
+$('mesCaja').value=hoy().slice(0,7);
+$('agendaDia').value=$('agendaFecha').value=hoy();
+$('deudaFecha').value=hoy();
+
+function mostrar(sec){
+  $('inicio').classList.toggle('hide',sec!=='inicio');
+  $('hojas').classList.toggle('hide',sec!=='hojas');
+  $('caja').classList.toggle('hide',sec!=='caja');
+  $('agenda').classList.toggle('hide',sec!=='agenda');
+  $('historial').classList.toggle('hide',sec!=='historial');
+   $('deudores').classList.toggle('hide',sec!=='deudores');
+  window.scrollTo(0,0);
+  render();
+}
+function saveLocal(){localStorage.setItem(LOCAL_KEY,JSON.stringify(db));render()}
+function saveDeudas(){localStorage.setItem(DEUDAS_KEY,JSON.stringify(deudas));render()}
+function SR(){return window.SpeechRecognition||window.webkitSpeechRecognition}
+
+async function init(){
+  if(!REMOTE_CONFIGURED){
+    $('syncBadge').textContent='🧪 DEMO SIN DATOS REALES';
+    $('loginScreen').classList.add('hide');
+    $('app').classList.remove('hide');
+    render();
+    return;
+  }
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    user=session.user;
+    await cargarRemoto();
+    mostrarApp();
+  }else{
+    $('app').classList.add('hide');
+    $('loginScreen').classList.remove('hide');
+    $('syncBadge').textContent='☁️ Sin sesión';
+  }
+  sb.auth.onAuthStateChange(async (_event,session)=>{
+    if(session){
+      user=session.user;
+      await cargarRemoto();
+      mostrarApp();
+    }
+  });
+}
+function mostrarApp(){
+  $('loginScreen').classList.add('hide');
+  $('app').classList.remove('hide');
+  $('syncBadge').textContent=deudasRemotas?'☁️ Hojas, Caja y Deudores sincronizados':'⚠️ Deudores sin sincronizar';
+  render();
+}
+async function iniciarSesion(){
+  const email=$('loginEmail').value.trim(), password=$('loginPass').value;
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  $('loginEstado').textContent=error?'⚠️ '+error.message:'✅ Acceso correcto.';
+}
+async function crearCuenta(){
+  const email=$('loginEmail').value.trim(), password=$('loginPass').value;
+  const {error}=await sb.auth.signUp({email,password});
+  $('loginEstado').textContent=error?'⚠️ '+error.message:'✅ Cuenta creada. Si Supabase pide confirmar correo, revisa tu email.';
+}
+
+async function cargarRemoto(){
+  if(!sb||!user)return;
+  const [{data:t,error:et},{data:m,error:em}] = await Promise.all([
+    sb.from('trabajos').select('*').order('id',{ascending:false}),
+    sb.from('caja_movimientos').select('*').order('id',{ascending:false})
+  ]);
+  if(et||em){
+    $('syncBadge').textContent='⚠️ Error sincronización';
+    return;
+  }
+  db.trabajos=(t||[]).map(x=>({
+    id:Number(x.id),fecha:x.fecha||'',cliente:x.cliente||'',telefono:x.telefono||'',
+    matricula:x.matricula||'',vehiculo:x.vehiculo||'',km:x.km||'',direccion:x.direccion||'',
+    trabajo:x.trabajo||'',obs:x.obs||'',estado:x.estado||'Abierto'
+  }));
+  db.mov=(m||[]).map(x=>({id:Number(x.id),fecha:x.fecha,tipo:x.tipo,importe:Number(x.importe),concepto:x.concepto}));
+  db.caja=370 + db.mov.reduce((a,x)=>a+(x.tipo==='entrada'?x.importe:-x.importe),0);
+  await cargarAgendaRemota();
+  await cargarDeudasRemotas();
+  saveLocal();
+}
+
+let reconocimientoActivo=null;
+function escucharConTexto(finalCb,estadoId,liveId,continuo=true){
+ const C=SR();if(!C){$(estadoId).textContent='⚠️ Usa Chrome en Android y abre la web mediante HTTPS.';return}
+ if(reconocimientoActivo){$(estadoId).textContent='🎤 Ya estoy escuchando. Espera a que termine.';return}
+ const r=new C();reconocimientoActivo=r;r.lang='es-ES';r.continuous=continuo;r.interimResults=true;
+ let finalText='',ultimoFinal='',procesado=false;
+ $(estadoId).textContent='🔴 ESCUCHANDO… habla ahora';$(liveId).textContent='';
+ r.onresult=e=>{let provisional='';for(let i=e.resultIndex;i<e.results.length;i++){let x=(e.results[i][0].transcript||'').trim();if(!x)continue;if(e.results[i].isFinal){if(x!==ultimoFinal){finalText+=(finalText?' ':'')+x;ultimoFinal=x}}else provisional+=(provisional?' ':'')+x}$(liveId).textContent=(finalText+' '+provisional).trim()||'Escuchando…'};
+ r.onerror=e=>{$(estadoId).textContent=e.error==='not-allowed'?'⛔ Micrófono bloqueado. Actívalo en los permisos del sitio.':'⚠️ Error de voz: '+e.error};
+ r.onend=()=>{reconocimientoActivo=null;if(procesado)return;procesado=true;const t=finalText.trim();if(t){$(liveId).textContent=t;finalCb(t)}else if(!$(estadoId).textContent.includes('⛔')&&!$(estadoId).textContent.includes('⚠️'))$(estadoId).textContent='⚠️ No he recibido texto. Prueba otra vez.'};
+ try{r.start()}catch(e){reconocimientoActivo=null;$(estadoId).textContent='⚠️ No se pudo iniciar el micrófono.'}
+}
+
+const dig={cero:'0',un:'1',uno:'1',una:'1',dos:'2',tres:'3',cuatro:'4',cinco:'5',seis:'6',siete:'7',ocho:'8',nueve:'9'};
+const unidades={cero:0,un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,veintidos:22,veintitres:23,veinticuatro:24,veinticinco:25,veintiseis:26,veintisiete:27,veintiocho:28,veintinueve:29};
+const decenas={treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90};
+const centenas={cien:100,ciento:100,doscientos:200,doscientas:200,trescientos:300,trescientas:300,cuatrocientos:400,cuatrocientas:400,quinientos:500,quinientas:500,seiscientos:600,seiscientas:600,setecientos:700,setecientas:700,ochocientos:800,ochocientas:800,novecientos:900,novecientas:900};
+function normalizaNumero(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/€/g,' euros ').replace(/[^a-z0-9,.-]+/g,' ').trim()}
+function palabrasANumero(s){
+  let z=normalizaNumero(s).replace(/\beuros?\b/g,'').trim();
+  const directo=z.match(/^[-+]?\d+(?:[,.]\d+)?$/); if(directo)return Number(z.replace(',','.'));
+  const toks=z.replace(/-/g,' ').split(/\s+/).filter(Boolean); let total=0,grupo=0,vio=false;
+  for(const w of toks){
+    if(w==='y'){continue}
+    if(unidades[w]!=null){grupo+=unidades[w];vio=true;continue}
+    if(decenas[w]!=null){grupo+=decenas[w];vio=true;continue}
+    if(centenas[w]!=null){grupo+=centenas[w];vio=true;continue}
+    if(w==='mil'){total+=(grupo||1)*1000;grupo=0;vio=true;continue}
+    if(w==='millon'||w==='millones'){total=(total+grupo||1)*1000000;grupo=0;vio=true;continue}
+  }
+  return vio?total+grupo:null;
+}
+function aDigitos(s){
+  const a=normalizaNumero(s).split(/\s+/).filter(Boolean);
+  if(a.length && a.every(x=>dig[x]!=null||/^\d+$/.test(x))) return a.map(x=>dig[x]??x).join('');
+  const n=palabrasANumero(s); if(n!=null)return String(n);
+  const nums=s.replace(/\D/g,''); return nums||s;
+}
+function normalizaMatricula(s){
+ let z=(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[.,;:!?-]+/g,' ');
+ const toks=z.split(/\s+/).filter(Boolean),out=[];
+ for(let i=0;i<toks.length;){
+   const x=toks[i];
+   if(dig[x]!=null){out.push(dig[x]);i++;continue}
+   if(/^\d+$/.test(x)){out.push(x);i++;continue}
+   let j=i,p=[];
+   while(j<toks.length&&(toks[j]==='y'||unidades[toks[j]]!=null||decenas[toks[j]]!=null||centenas[toks[j]]!=null||toks[j]==='mil')){p.push(toks[j]);j++}
+   if(p.length){const n=palabrasANumero(p.join(' '));if(n!=null){out.push(String(n));i=j;continue}}
+   if(/^[a-zñ0-9]+$/.test(x))out.push(x.toUpperCase());
+   i++;
+ }
+ return out.join('').replace(/[^A-ZÑ0-9]/g,'');
+}
+
+function extraerImporteVoz(t){
+ const m=t.match(/\d+(?:[,.]\d+)?/);if(m)return{valor:Number(m[0].replace(',','.')),textoOriginal:m[0]};
+ const ps=t.trim().split(/\s+/),u=[];let empezo=false;
+ for(const original of ps){
+   const w=normalizaNumero(original);
+   if(/^(entrada|salida|gasto|pago|de|por)$/.test(w)&&!empezo)continue;
+   if(w==='y'||unidades[w]!=null||decenas[w]!=null||centenas[w]!=null||w==='mil'||w==='millon'||w==='millones'){u.push(original);empezo=true;continue}
+   if(empezo)break;
+ }
+ const textoOriginal=u.join(' '),valor=palabrasANumero(textoOriginal);
+ return valor!=null?{valor,textoOriginal}:null;
+}
+function extraer(t,label,next){
+  const fin=next.length?'(?=\\s+(?:'+next.join('|')+')\\b|$)':'$';
+  const m=t.match(new RegExp('(?:^|\\s)(?:'+label+')\\s*[:,-]?\\s*(.+?)'+fin,'i'));
+  return m?m[1].trim():'';
+}
+const defs=[
+ ['cliente','cliente'],['telefono','tel[eé]fono'],['matricula','matr[ií]cula'],
+ ['vehiculo','veh[ií]culo|coche'],['km','kil[oó]metros|kilometraje|km'],
+ ['direccion','direcci[oó]n'],['trabajo','trabajo|trabajos|reparaci[oó]n'],['obs','observaciones']
+];
+function dictarHojaCompleta(){
+  escucharConTexto(t=>{
+    let n=0;
+    defs.forEach((d,i)=>{
+      let v=extraer(t,d[1],defs.slice(i+1).map(x=>x[1]));
+      if(!v)return;
+      if(d[0]==='telefono'||d[0]==='km')v=aDigitos(v);
+      if(d[0]==='matricula')v=normalizaMatricula(v);
+      $(d[0]).value=v; n++;
+    });
+    $('vozEstado').textContent='✅ Dictado terminado: '+n+' campos rellenados. Revisa y pulsa GUARDAR HOJA.';
+  },'vozEstado','vozLive',true);
+}
+function dictarCampo(id){
+  escucharConTexto(t=>{$(id).value=(id==='telefono'||id==='km')?aDigitos(t):id==='matricula'?normalizaMatricula(t):t;$('vozEstado').textContent='✅ Campo rellenado.'},'vozEstado','vozLive',false);
+}
+
+function prioridadDe(x){
+  const m=String(x?.obs||'').match(/\[\[PRIORIDAD:(Alta|Normal|Baja)\]\]/i);
+  if(!m)return 'Normal';
+  return m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase();
+}
+function obsLimpias(obs){return String(obs||'').replace(/\s*\[\[PRIORIDAD:(Alta|Normal|Baja)\]\]\s*/ig,'').trim()}
+function obsConPrioridad(obs,p){return (obsLimpias(obs)+(obsLimpias(obs)?'\n':'')+'[[PRIORIDAD:'+(p||'Normal')+']]').trim()}
+async function cambiarPrioridad(id,p){
+  const x=db.trabajos.find(a=>a.id===id); if(!x)return;
+  x.obs=obsConPrioridad(x.obs,p);
+  saveLocal();
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('trabajos').upsert({...x,user_id:user.id});
+    if(error){$('vozEstado').textContent='⚠️ Prioridad guardada localmente, error al sincronizar: '+error.message;return}
+    $('vozEstado').textContent='✅ Prioridad '+p+' guardada y sincronizada.';
+  }
+}
+
+async function guardarHoja(){
+  const id=$('editId').value?+$('editId').value:Date.now();
+  const x={id,fecha:$('fecha').value,cliente:$('cliente').value||'Cliente pendiente',
+    telefono:$('telefono').value,matricula:normalizaMatricula($('matricula').value),
+    vehiculo:$('vehiculo').value,km:$('km').value,direccion:$('direccion').value,
+    trabajo:$('trabajo').value||'Trabajo pendiente',obs:obsConPrioridad($('obs').value,$('prioridad').value),estado:$('estado').value};
+  const p=db.trabajos.findIndex(a=>a.id===id);
+  p>=0?db.trabajos[p]=x:db.trabajos.unshift(x);
+  guardarCobroLocal(id);
+  $('editId').value=String(id);
+
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('trabajos').upsert({...x,user_id:user.id});
+    if(error){$('vozEstado').textContent='⚠️ Guardado local, error al sincronizar: '+error.message;saveLocal();return}
+    $('vozEstado').textContent='✅ Hoja guardada y sincronizada.';
+  }else $('vozEstado').textContent='✅ Hoja guardada en este dispositivo.';
+  saveLocal();
+  if($('agendaOrigen').value){const origen=Number($('agendaOrigen').value);$('agendaOrigen').value='';await cambiarEstadoCita(origen,'En taller');}
+}
+function editar(id){
+  const x=db.trabajos.find(a=>a.id===id); if(!x)return;
+  $('editId').value=x.id; $('agendaOrigen').value='';
+  ['fecha','cliente','telefono','matricula','vehiculo','km','direccion','trabajo','estado'].forEach(k=>$(k).value=x[k]||'');
+  $('obs').value=obsLimpias(x.obs); $('prioridad').value=prioridadDe(x); cargarCobroHoja(id);
+  mostrar('hojas'); actualizarAvisoDeuda(); $('vozEstado').textContent='✏️ Modifica lo necesario y pulsa GUARDAR HOJA.';
+}
+function imprimirHojaActual(){
+  const campos=['fecha','cliente','telefono','matricula','vehiculo','km','direccion','trabajo','obs','estado'];
+  const x=Object.fromEntries(campos.map(k=>[k,$(k).value]));
+  x.obs=obsConPrioridad(x.obs,$('prioridad').value);
+  imprimirDatosHoja(x);
+}
+function imprimirCita(id){
+  const c=db.agenda.find(x=>x.id===id);
+  if(!c)return;
+  imprimirDatosHoja({fecha:c.fecha,cliente:c.cliente,telefono:c.telefono,matricula:c.matricula,
+    vehiculo:c.vehiculo,km:'',direccion:'',trabajo:c.trabajo,
+    obs:'Cita de agenda · '+(c.estado||'Pendiente'),estado:'Cita programada'});
+}
+function imprimirDatosHoja(x){
+  let area=$('printArea');
+  if(!area){area=document.createElement('div');area.id='printArea';document.body.appendChild(area)}
+  const e=v=>escHtml(v||'');
+  area.innerHTML=`<div class="printSheet"><h1>HOJA DE TRABAJO · TALLER FABI DOMÍNGUEZ</h1><div class="printGrid">
+  <div class="printRow"><span class="printLabel">Fecha:</span> ${e(x.fecha)}</div>
+  <div class="printRow"><span class="printLabel">Estado:</span> ${e(x.estado)}</div>
+  <div class="printRow"><span class="printLabel">Prioridad:</span> ${e(prioridadDe(x))}</div>
+  <div class="printRow"><span class="printLabel">Cliente:</span> ${e(x.cliente)}</div>
+  <div class="printRow"><span class="printLabel">Teléfono:</span> ${e(x.telefono)}</div>
+  <div class="printRow"><span class="printLabel">Matrícula:</span> ${e(x.matricula)}</div>
+  <div class="printRow"><span class="printLabel">Vehículo:</span> ${e(x.vehiculo)}</div>
+  <div class="printRow"><span class="printLabel">Kilómetros:</span> ${e(x.km)}</div>
+  <div class="printRow"><span class="printLabel">Dirección:</span> ${e(x.direccion)}</div>
+  <div class="printRow printFull"><span class="printLabel">Trabajos a realizar:</span><br>${e(x.trabajo).replace(/\\n/g,'<br>')}</div>
+  <div class="printRow printFull"><span class="printLabel">Observaciones:</span><br>${e(obsLimpias(x.obs)).replace(/\\n/g,'<br>')}</div>
+  </div></div>`;
+  setTimeout(()=>window.print(),50);
+}
+function imprimirHoja(id){
+  const x=db.trabajos.find(a=>a.id===id); if(!x)return;
+  let area=$('printArea');
+  if(!area){area=document.createElement('div');area.id='printArea';document.body.appendChild(area)}
+  area.innerHTML=`<div class="printSheet"><h1>HOJA DE TRABAJO · TALLER FABI DOMÍNGUEZ</h1><div class="printGrid">
+  <div class="printRow"><span class="printLabel">Fecha:</span> ${x.fecha||''}</div>
+  <div class="printRow"><span class="printLabel">Estado:</span> ${x.estado||''}</div>
+  <div class="printRow"><span class="printLabel">Prioridad:</span> ${prioridadDe(x)}</div>
+  <div class="printRow"><span class="printLabel">Cliente:</span> ${x.cliente||''}</div>
+  <div class="printRow"><span class="printLabel">Teléfono:</span> ${x.telefono||''}</div>
+  <div class="printRow"><span class="printLabel">Matrícula:</span> ${x.matricula||''}</div>
+  <div class="printRow"><span class="printLabel">Vehículo:</span> ${x.vehiculo||''}</div>
+  <div class="printRow"><span class="printLabel">Kilómetros:</span> ${x.km||''}</div>
+  <div class="printRow"><span class="printLabel">Dirección:</span> ${x.direccion||''}</div>
+  <div class="printRow printFull"><span class="printLabel">Trabajos a realizar:</span><br>${(x.trabajo||'').replace(/\n/g,'<br>')}</div>
+  <div class="printRow printFull"><span class="printLabel">Observaciones:</span><br>${obsLimpias(x.obs).replace(/\n/g,'<br>')}</div>
+  </div></div>`;
+  setTimeout(()=>window.print(),50);
+}
+
+function dictarCaja(){
+  escucharConTexto(t=>{
+    $('tipo').value=/salida|gasto|pago/i.test(t)?'salida':'entrada';
+    const imp=extraerImporteVoz(t); if(imp)$('importe').value=String(imp.valor).replace('.',',');
+    let concepto=t.replace(/entrada|salida|gasto|pago/ig,'');
+    if(imp){concepto=concepto.replace(imp.textoOriginal,'')}
+    concepto=concepto.replace(/\s*(euros?|€)\s*/i,' ').replace(/\s+/g,' ').trim();
+    $('concepto').value=concepto;
+    $('cajaEstado').textContent=imp?'✅ Movimiento dictado. Revisa y pulsa GUARDAR MOVIMIENTO.':'⚠️ No he entendido el importe. Puedes escribirlo a mano.';
+  },'cajaEstado','cajaLive',true);
+}
+function dictarConcepto(){
+  escucharConTexto(t=>{$('concepto').value=t;$('cajaEstado').textContent='✅ Concepto rellenado.'},'cajaEstado','cajaLive',false);
+}
+async function guardarCaja(){
+  const v=parseFloat(($('importe').value||'').replace(',','.'))||0;
+  if(!v){$('cajaEstado').textContent='⚠️ Falta el importe.';return}
+  const x={id:Date.now(),fecha:$('cfecha').value,tipo:$('tipo').value,importe:v,concepto:$('concepto').value||'Sin concepto'};
+  db.mov.unshift(x);
+  db.caja += x.tipo==='entrada'?v:-v;
+
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('caja_movimientos').insert({...x,user_id:user.id});
+    if(error){$('cajaEstado').textContent='⚠️ Guardado local, error al sincronizar: '+error.message;saveLocal();return}
+    $('cajaEstado').textContent='✅ Movimiento guardado y sincronizado.';
+  }else $('cajaEstado').textContent='✅ Movimiento guardado en este dispositivo.';
+  $('importe').value='';$('concepto').value='';$('cfecha').value=hoy();
+  saveLocal();
+}
+
+async function eliminarHoja(id){
+  const x=db.trabajos.find(a=>a.id===id); if(!x)return;
+  if(!confirm('¿Seguro que quieres borrar esta hoja de trabajo?'))return;
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('trabajos').delete().eq('id',id);
+    if(error){$('vozEstado').textContent='⚠️ No se pudo borrar: '+error.message;return}
+  }
+  db.trabajos=db.trabajos.filter(a=>a.id!==id); saveLocal();
+  $('vozEstado').textContent='🗑️ Hoja borrada y sincronizada.';
+}
+async function eliminarCaja(id){
+  const x=db.mov.find(a=>a.id===id); if(!x)return;
+  if(!confirm('¿Seguro que quieres borrar este movimiento de caja?'))return;
+  if(REMOTE_CONFIGURED && sb && user){
+    const {error}=await sb.from('caja_movimientos').delete().eq('id',id);
+    if(error){$('cajaEstado').textContent='⚠️ No se pudo borrar: '+error.message;return}
+  }
+  db.mov=db.mov.filter(a=>a.id!==id);
+  db.caja=370 + db.mov.reduce((a,m)=>a+(m.tipo==='entrada'?Number(m.importe):-Number(m.importe)),0);
+  saveLocal(); $('cajaEstado').textContent='🗑️ Movimiento borrado y sincronizado.';
+}
+
+
+function escHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function imprimirListado(titulo,subtitulo,contenido){let area=$('printArea');if(!area){area=document.createElement('div');area.id='printArea';document.body.appendChild(area)}area.innerHTML=`<div class="printSheet"><h1>${titulo}</h1><div style="text-align:center;margin-bottom:16px">${subtitulo}</div>${contenido}</div>`;setTimeout(()=>window.print(),50)}
+function imprimirHojasAbiertas(){const a=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='abierto').sort((x,y)=>(x.fecha||'').localeCompare(y.fecha||''));const f=a.length?a.map(x=>`<div class="printRow" style="border-bottom:1px solid #999;padding:8px 0"><b>${escHtml(x.fecha)} · ${escHtml(x.cliente)}</b><br>Matrícula: ${escHtml(x.matricula)} · Vehículo: ${escHtml(x.vehiculo)}<br>Trabajo: ${escHtml(x.trabajo)}<br>Prioridad: ${escHtml(prioridadDe(x))}</div>`).join(''):'<p>No hay hojas abiertas.</p>';imprimirListado('LISTADO DE HOJAS ABIERTAS · TALLER FABI DOMÍNGUEZ',`${a.length} hojas abiertas`,f)}
+function datosCajaMes(){const mes=$('mesCaja').value||hoy().slice(0,7);const a=db.mov.filter(x=>(x.fecha||'').slice(0,7)===mes).sort((x,y)=>(x.fecha||'').localeCompare(y.fecha||''));const entradas=a.filter(x=>x.tipo==='entrada').reduce((z,x)=>z+Number(x.importe||0),0);const salidas=a.filter(x=>x.tipo==='salida').reduce((z,x)=>z+Number(x.importe||0),0);return{mes,a,entradas,salidas,resultado:entradas-salidas}}
+function imprimirCajaMes(){const d=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';const f=d.a.length?d.a.map(x=>`<div class="printRow" style="border-bottom:1px solid #999;padding:8px 0"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'ENTRADA':'SALIDA'} · ${dinero(x.importe)}</b><br>${escHtml(x.concepto)}</div>`).join(''):'<p>No hay movimientos en este mes.</p>';imprimirListado('LISTADO DE CAJA · TALLER FABI DOMÍNGUEZ',escHtml(d.mes),`<div><b>Entradas:</b> ${dinero(d.entradas)} &nbsp; <b>Salidas:</b> ${dinero(d.salidas)} &nbsp; <b>Resultado:</b> ${dinero(d.resultado)}</div>`+f)}
+
+
+// ===== DEUDORES: módulo independiente de pruebas, SOLO LOCAL =====
+const euros=n=>Number(n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+const claveCliente=s=>String(s||'').trim().toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+const numeroDinero=s=>{const t=String(s||'').trim().replace(/\s/g,'');return Number(t.includes(',')?t.replace(/\./g,'').replace(',','.'):t)};
+async function crearDeuda(){
+ const cliente=$('deudaCliente').value.trim(),importe=numeroDinero($('deudaImporte').value);
+ if(!cliente||!Number.isFinite(importe)||importe<=0){$('deudaEstado').textContent='⚠️ Indica un cliente y un importe positivo.';return}
+ const deuda={id:Date.now(),cliente,telefono:$('deudaTelefono').value.trim(),matricula:normalizaMatricula($('deudaMatricula').value),fecha:$('deudaFecha').value||hoy(),concepto:$('deudaConcepto').value.trim(),total:Math.round(importe*100)/100,pagos:[]};
+ if(!await guardarDeudaRemota(deuda))return;
+ ['deudaCliente','deudaTelefono','deudaMatricula','deudaImporte','deudaConcepto'].forEach(k=>$(k).value='');
+ $('deudaFecha').value=hoy();
+}
+function pendienteDeuda(d){return Math.max(0,Math.round((Number(d.total||0)-(d.pagos||[]).reduce((a,p)=>a+Number(p.importe||0),0))*100)/100)}
+async function registrarPagoDeuda(id){
+ const d=deudas.find(x=>x.id===id);if(!d)return;
+ const valor=prompt('Importe recibido de '+d.cliente+' (pendiente '+euros(pendienteDeuda(d))+'). Este cobro NO se añadirá automáticamente a Caja:');
+ if(valor===null)return;
+ const imp=numeroDinero(valor),pend=pendienteDeuda(d);
+ if(!Number.isFinite(imp)||imp<=0||Math.round(imp*100)>Math.round(pend*100)){alert('Introduce un importe positivo que no supere la deuda.');return}
+ const actualizado={...d,pagos:[...(d.pagos||[]),{fecha:hoy(),importe:Math.round(imp*100)/100}]};
+ if(!await guardarDeudaRemota(actualizado))return;
+ alert('Cobro registrado en Deudores. Si corresponde, anótalo también en Caja para reflejar el movimiento de efectivo.');
+}
+async function borrarDeuda(id){if(!confirm('¿Borrar esta deuda y todos sus pagos registrados?'))return;if(!deudasRemotas){$('deudaEstado').textContent='⚠️ No hay sincronización. No se ha borrado.';return}const {error}=await sb.from('deudores').delete().eq('id',id);if(error){$('deudaEstado').textContent='⚠️ '+error.message;return}deudas=deudas.filter(d=>d.id!==id);saveDeudas();actualizarAvisoDeuda()}
+function actualizarAvisoDeuda(){
+ const nombre=claveCliente($('cliente').value),tel=String($('telefono').value||'').replace(/\D/g,''),mat=normalizaMatricula($('matricula').value);
+ const coincidencias=deudas.filter(d=>pendienteDeuda(d)>0 && (nombre&&claveCliente(d.cliente)===nombre || tel&&tel.length>=9&&String(d.telefono||'').replace(/\D/g,'')===tel || mat&&d.matricula===mat));
+ const aviso=$('avisoDeudaHoja');if(!aviso)return;
+ aviso.classList.toggle('hide',!coincidencias.length);
+ aviso.textContent=coincidencias.length?'🔴 CLIENTE CON DEUDA PENDIENTE: '+euros(coincidencias.reduce((a,d)=>a+pendienteDeuda(d),0))+' · Consulta Deudores.':'';
+}
+function renderDeudas(){
+ const activas=deudas.filter(d=>pendienteDeuda(d)>0);
+ $('totalDeuda').textContent=euros(activas.reduce((a,d)=>a+pendienteDeuda(d),0));
+ $('listaDeudores').innerHTML=activas.length?activas.map(d=>`<div class="item"><b>${escHtml(d.cliente)}</b> · <b style="color:#b42318">${euros(pendienteDeuda(d))}</b><div>${escHtml(d.fecha)} · ${escHtml(d.matricula||'Sin matrícula')}</div><div>${escHtml(d.concepto||'Sin concepto')}</div><div class="small">Original: ${euros(d.total)} · Abonado: ${euros(d.total-pendienteDeuda(d))}</div><div class="actions"><button class="green" onclick="registrarPagoDeuda(${d.id})">💶 REGISTRAR COBRO</button><button class="light" onclick="borrarDeuda(${d.id})">🗑️ BORRAR</button></div></div>`).join(''):'<div>✅ No hay deudas pendientes registradas en este navegador.</div>';
+}
+['cliente','telefono','matricula'].forEach(k=>$(k).addEventListener('input',actualizarAvisoDeuda));
+
+
+// ===== SINCRONIZACIÓN DE DEUDORES =====
+async function cargarDeudasRemotas(){
+ deudasRemotas=false;
+ const {data,error}=await sb.from('deudores').select('*').order('id',{ascending:false});
+ if(error){$('deudaSync').textContent='⚠️ Deudores NO sincronizados: '+error.message;return}
+ deudas=(data||[]).map(x=>({id:Number(x.id),hojaId:x.hoja_id==null?null:Number(x.hoja_id),cliente:x.cliente||'',telefono:x.telefono||'',matricula:x.matricula||'',fecha:x.fecha||'',concepto:x.concepto||'',total:Number(x.total||0),pagos:Array.isArray(x.pagos)?x.pagos:[]}));
+ deudasRemotas=true;
+ $('deudaSync').textContent='☁️ Deudores sincronizados entre dispositivos.';
+ $('importacionDeudas').textContent=Array.isArray(deudasAntiguas)&&deudasAntiguas.length?deudasAntiguas.length+' registros locales detectados. Puedes importarlos una sola vez; comprueba antes que no estén duplicados.':'No hay deudas antiguas en este navegador.';
+ actualizarAvisoDeuda();renderDeudas();
+}
+async function guardarDeudaRemota(d){
+ if(!deudasRemotas||!sb||!user){$('deudaEstado').textContent='⚠️ Deudores sin sincronización. No se ha guardado. Activa la tabla en Supabase.';return false}
+ const fila={id:d.id,user_id:user.id,hoja_id:d.hojaId||null,cliente:d.cliente,telefono:d.telefono||'',matricula:d.matricula||'',fecha:d.fecha||hoy(),concepto:d.concepto||'',total:d.total,pagos:d.pagos||[]};
+ const {error}=await sb.from('deudores').upsert(fila);
+ if(error){$('deudaEstado').textContent='⚠️ No se guardó la deuda: '+error.message;return false}
+ const i=deudas.findIndex(x=>x.id===d.id);if(i>=0)deudas[i]=d;else deudas.unshift(d);
+ saveDeudas();actualizarAvisoDeuda();$('deudaEstado').textContent='✅ Deuda guardada y sincronizada.';return true;
+}
+async function importarDeudasLocales(){
+ if(!deudasRemotas){$('deudaEstado').textContent='⚠️ Activa primero la sincronización de Deudores.';return}
+ const antiguas=Array.isArray(deudasAntiguas)?deudasAntiguas:[];
+ const pendientes=antiguas.filter(d=>!deudas.some(r=>r.id===d.id||d.hojaId&&r.hojaId===d.hojaId));
+ if(!pendientes.length){alert('No hay deudas antiguas nuevas para importar.');return}
+ if(!confirm('¿Importar '+pendientes.length+' deudas antiguas? Comprueba que no estén ya anotadas con otro identificador.'))return;
+ let n=0;for(const d of pendientes){if(await guardarDeudaRemota(d))n++;else break}
+ $('deudaEstado').textContent='Importadas '+n+' de '+pendientes.length+' deudas. Revisa los importes.';
+}
+
+// ===== AGENDA =====
+// Las citas permanecen en este dispositivo hasta habilitar la tabla agenda en Supabase.
+async function cargarAgendaRemota(){
+  agendaRemota=false;
+  if(!sb||!user){actualizarAvisoAgenda();return}
+  const {data,error}=await sb.from('agenda').select('*').order('fecha',{ascending:true});
+  if(error){actualizarAvisoAgenda();$('agendaSync').textContent='⚠️ No se puede conectar la agenda con Supabase: '+error.message;return}
+  db.agenda=(data||[]).map(x=>({id:Number(x.id),fecha:x.fecha||'',cliente:x.cliente||'',telefono:x.telefono||'',matricula:x.matricula||'',vehiculo:x.vehiculo||'',trabajo:x.trabajo||'',estado:x.estado||'Pendiente'}));
+  agendaRemota=true;actualizarAvisoAgenda();
+}
+function actualizarAvisoAgenda(){
+  $('agendaSync').textContent=agendaRemota?'☁️ Agenda sincronizada con tu cuenta.':'💾 Agenda guardada solo en este dispositivo. Para verla también en el móvil hay que activar la tabla de Supabase.';
+}
+function diaMas(fecha,dias){const d=new Date((fecha||hoy())+'T12:00:00');d.setDate(d.getDate()+dias);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
+function moverVistaAgenda(n){$('agendaDia').value=diaMas($('agendaDia').value,n);renderAgenda()}
+function limpiarCita(){
+  $('agendaEditId').value='';$('agendaTitulo').textContent='➕ Añadir cita';
+  $('agendaFecha').value=$('agendaDia').value||hoy();
+  ['Cliente','Telefono','Matricula','Vehiculo','Trabajo'].forEach(k=>$('agenda'+k).value='');
+}
+async function guardarCita(){
+  const fecha=$('agendaFecha').value,cliente=$('agendaCliente').value.trim(),trabajo=$('agendaTrabajo').value.trim();
+  if(!fecha||!cliente||!trabajo){$('agendaEstado').textContent='⚠️ Completa fecha, cliente y trabajo previsto.';return}
+  const id=Number($('agendaEditId').value)||Date.now();
+  const anterior=db.agenda.find(x=>x.id===id);
+  const x={id,fecha,cliente,telefono:$('agendaTelefono').value.trim(),matricula:normalizaMatricula($('agendaMatricula').value),vehiculo:$('agendaVehiculo').value.trim(),trabajo,estado:anterior?.estado||'Pendiente'};
+  if(REMOTE_CONFIGURED && sb && user && !agendaRemota){$('agendaEstado').textContent='⚠️ Agenda sin sincronización. No se ha guardado la cita; comprueba la conexión con Supabase.';return}
+  if(agendaRemota){
+    const {error}=await sb.from('agenda').upsert({...x,user_id:user.id});
+    if(error){$('agendaEstado').textContent='⚠️ No se guardó la cita: '+error.message;return}
+  }
+  const pos=db.agenda.findIndex(a=>a.id===id);if(pos>=0)db.agenda[pos]=x;else db.agenda.push(x);
+  $('agendaDia').value=fecha;saveLocal();limpiarCita();
+  $('agendaEstado').textContent=agendaRemota?'✅ Cita guardada y sincronizada.':'✅ Cita guardada en este dispositivo.';
+}
+function editarCita(id){
+  const x=db.agenda.find(a=>a.id===id);if(!x)return;
+  $('agendaEditId').value=x.id;$('agendaTitulo').textContent='✏️ Modificar cita';
+  $('agendaFecha').value=x.fecha;
+  for(const k of ['Cliente','Telefono','Matricula','Vehiculo','Trabajo'])$('agenda'+k).value=x[k.toLowerCase()]||'';
+  $('agendaEstado').textContent='Cambia la fecha o los datos y pulsa GUARDAR CITA.';
+  $('agendaFecha').scrollIntoView({behavior:'smooth',block:'center'});
+}
+async function borrarCita(id){
+  if(!confirm('¿Seguro que quieres borrar esta cita?'))return;
+  if(agendaRemota){const {error}=await sb.from('agenda').delete().eq('id',id);if(error){$('agendaEstado').textContent='⚠️ No se pudo borrar: '+error.message;return}}
+  db.agenda=db.agenda.filter(a=>a.id!==id);saveLocal();$('agendaEstado').textContent='🗑️ Cita borrada.';
+}
+async function cambiarEstadoCita(id,estado){
+  const x=db.agenda.find(a=>a.id===id);if(!x)return;
+  if(agendaRemota){const {error}=await sb.from('agenda').update({estado}).eq('id',id);if(error){$('agendaEstado').textContent='⚠️ No se pudo actualizar: '+error.message;return}}
+  x.estado=estado;saveLocal();
+}
+function crearHojaDesdeCita(id){
+  const x=db.agenda.find(a=>a.id===id);if(!x)return;
+  $('editId').value='';$('agendaOrigen').value=String(id);cargarCobroHoja(null);
+  $('fecha').value=hoy();$('cliente').value=x.cliente;$('telefono').value=x.telefono;
+  $('matricula').value=x.matricula;$('vehiculo').value=x.vehiculo;
+  $('km').value='';$('direccion').value='';$('trabajo').value=x.trabajo;$('obs').value='';
+  $('estado').value='Abierto';$('prioridad').value='Normal';
+  mostrar('hojas');$('vozEstado').textContent='📅 Datos copiados de la cita. Revisa y pulsa GUARDAR HOJA para crearla.';
+}
+function pasarHojaAgenda(id){
+  const x=db.trabajos.find(a=>a.id===id);
+  if(!x)return;
+  // La hoja original se conserva abierta, sin cambios.
+  limpiarCita();
+  $('agendaFecha').value=$('agendaDia').value||hoy();
+  $('agendaCliente').value=x.cliente||'';
+  $('agendaTelefono').value=x.telefono||'';
+  $('agendaMatricula').value=x.matricula||'';
+  $('agendaVehiculo').value=x.vehiculo||'';
+  $('agendaTrabajo').value=x.trabajo||'';
+  $('agendaTitulo').textContent='📅 Programar trabajo desde hoja';
+  mostrar('agenda');
+  $('agendaEstado').textContent='Elige el día y pulsa GUARDAR CITA. La hoja de trabajo seguirá abierta.';
+  $('agendaFecha').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function renderAgenda(){
+  actualizarAvisoAgenda();
+  const fecha=$('agendaDia').value||hoy();
+  const a=db.agenda.filter(x=>x.fecha===fecha).sort((x,y)=>Number(x.id)-Number(y.id));
+  const pendientes=db.agenda.filter(x=>x.estado==='Pendiente').length;
+  $('agendaResumen').textContent=a.length+' citas para este día · '+pendientes+' pendientes en total';
+  $('agendaLista').innerHTML=a.length?a.map(x=>`<div class="item"><b>${escHtml(x.cliente)}</b> · ${escHtml(x.estado)}<div>🚗 ${escHtml(x.matricula)} · ${escHtml(x.vehiculo)}</div><div>🔧 ${escHtml(x.trabajo)}</div><div class="actions"><button class="light" onclick="editarCita(${x.id})">✏️ CAMBIAR DÍA / EDITAR</button><button onclick="imprimirCita(${x.id})">🖨️ IMPRIMIR HOJA</button><button class="light" onclick="borrarCita(${x.id})">🗑️ BORRAR</button>${x.estado==='En taller'?'<button class="green" disabled>EN TALLER</button>':''}</div></div>`).join(''):'<div class="small">No hay citas para este día.</div>';
+}
+
+function editarCitaDesdeOrden(id){mostrar('agenda');editarCita(id)}
+async function archivarOrden(id,citaId){
+  const x=db.trabajos.find(t=>t.id===id);
+  if(!x||!confirm('¿Terminar y archivar el trabajo de '+x.cliente+'? La hoja y sus deudas se conservarán.'))return;
+  if(REMOTE_CONFIGURED&&sb&&user){
+    const {error}=await sb.from('trabajos').update({estado:'Terminado'}).eq('id',id);
+    if(error){alert('No se ha archivado: '+error.message);return}
+  }
+  x.estado='Terminado';
+  if(citaId){await cambiarEstadoCita(citaId,'Terminado')}
+  saveLocal();
+  alert('Trabajo archivado en Historial.');
+}
+function renderHistorial(){
+  const q=String($('buscarHistorial').value||'').trim().toLocaleLowerCase('es');
+  const terminadas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()==='terminado')
+    .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const visibles=terminadas.filter(x=>!q||[x.cliente,x.matricula].some(v=>String(v||'').toLocaleLowerCase('es').includes(q)));
+  $('resumenHistorial').textContent=visibles.length+' de '+terminadas.length+' trabajos archivados';
+  $('lista').innerHTML=visibles.length?visibles.map(x=>`<div class="item"><b>${escHtml(x.fecha)} · ${escHtml(x.cliente)}</b><div>${escHtml(x.matricula||'')} · ${escHtml(x.vehiculo||'')}</div><div>${escHtml(x.trabajo)}</div><div class="actions"><button onclick="editar(${x.id})">✏️ CONSULTAR / MODIFICAR</button><button onclick="imprimirHoja(${x.id})">🖨️ IMPRIMIR</button></div><div class="small">Archivado · Las deudas se conservan</div></div>`).join(''):'<div>No hay trabajos archivados que coincidan con la búsqueda.</div>';
+}
+function renderDashboard(){
+  const abiertos=db.trabajos.filter(x=>(x.estado||'').toLowerCase()!=='terminado');
+  const citas=db.agenda.filter(x=>x.fecha===hoy());
+  const cajaHoy=db.mov.filter(x=>x.fecha===hoy()).reduce((a,x)=>a+(x.tipo==='entrada'?1:-1)*Number(x.importe||0),0);
+  const deuda=deudas.reduce((a,d)=>a+pendienteDeuda(d),0);
+  $('dashAbiertos').textContent=abiertos.length;
+  $('dashCitas').textContent=citas.length;
+  $('dashCaja').textContent=euros(cajaHoy);
+  $('dashDeudas').textContent=euros(deuda);
+  const urg=abiertos.filter(x=>prioridadDe(x)==='Alta');
+  $('dashUrgentes').innerHTML=urg.length?urg.map(x=>`<button class="dashLine urgent" onclick="editar(${x.id})"><b>🔴 ${escHtml(x.cliente)}</b><span>${escHtml(x.matricula)} · ${escHtml(x.vehiculo)}</span><small>${escHtml(x.trabajo)}</small></button>`).join(''):'<p class="small">No hay trabajos urgentes registrados.</p>';
+  $('dashAgenda').innerHTML=citas.length?citas.map(x=>`<button class="dashLine" onclick="mostrar('agenda')"><b>${escHtml(x.cliente)}</b><span>${escHtml(x.matricula)} · ${escHtml(x.vehiculo)}</span><small>${escHtml(x.trabajo)}</small></button>`).join(''):'<p class="small">No hay citas para hoy.</p>';
+}
+function render(){
+  renderDashboard();
+  renderAgenda();
+  renderDeudas();
+  $('saldo').textContent=db.caja.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+  const abiertas=db.trabajos.filter(x=>(x.estado||'').toLowerCase()!=='terminado');
+  const citasPendientes=db.agenda.filter(x=>x.estado!=='Terminado');
+  const ordenes=[];
+  const emparejadas=new Set();
+  const clave=s=>String(s||'').trim().toLowerCase();
+  for(const c of citasPendientes){
+    const h=abiertas.find(x=>!emparejadas.has(x.id)&&((c.matricula&&x.matricula&&clave(c.matricula)===clave(x.matricula))||(!c.matricula&&!x.matricula&&clave(c.cliente)===clave(x.cliente)&&clave(c.trabajo)===clave(x.trabajo))));
+    if(h)emparejadas.add(h.id);
+    ordenes.push({c,h,fecha:c.fecha||h?.fecha||''});
+  }
+  for(const h of abiertas)if(!emparejadas.has(h.id))ordenes.push({c:null,h,fecha:h.fecha||''});
+  ordenes.sort((a,b)=>a.fecha.localeCompare(b.fecha)||Number(a.c?.id||a.h?.id)-Number(b.c?.id||b.h?.id));
+  const qOrden=String($('buscarOrdenes').value||'').trim().toLocaleLowerCase('es');
+  const filtradas=ordenes.filter(({c,h})=>!qOrden||[c?.cliente,h?.cliente,c?.matricula,h?.matricula,c?.vehiculo,h?.vehiculo,c?.trabajo,h?.trabajo].some(v=>String(v||'').toLocaleLowerCase('es').includes(qOrden)));
+  $('numAbiertas').textContent=filtradas.length===ordenes.length?String(ordenes.length):filtradas.length+' / '+ordenes.length;
+  $('listaAbiertas').innerHTML=filtradas.length?filtradas.map(({c,h,fecha})=>{
+    const x=h||c,p=h?prioridadDe(h):'Normal';
+    return `<div class="trabajoAbierto prio-${p}"><div class="fechaEntrada">📅 ${c?'Agenda':'Sin cita · Entrada'}: ${escHtml(fecha)}</div><div class="clienteAbierto">${escHtml(x.cliente)}</div><div class="vehiculoAbierto">🚗 ${escHtml(x.matricula||'')} · ${escHtml(x.vehiculo||'')}</div><div class="trabajoTexto">🔧 ${escHtml(x.trabajo)}</div><div class="small">${c?'Cita: '+escHtml(c.estado):'Hoja sin cita'}${h?' · Hoja abierta':''}</div><div class="actions">${h?`<button class="light" onclick="editar(${h.id})">✏️ ABRIR HOJA</button>`:`<button onclick="crearHojaDesdeCita(${c.id})">🔧 CREAR HOJA</button>`}${c?`<button class="light" onclick="editarCitaDesdeOrden(${c.id})">📅 CAMBIAR FECHA</button>`:`<button class="light" onclick="pasarHojaAgenda(${h.id})">📅 AGENDAR</button>`}</div>${h?`<button class="green" style="margin-top:7px" onclick="archivarOrden(${h.id},${c?.id||'null'})">✅ TERMINAR Y ARCHIVAR</button>`:'<div class="small">Crea la hoja para poder terminar y archivar este trabajo.</div>'}</div>`
+  }).join(''):'<div>✅ No hay órdenes que coincidan con la búsqueda.</div>';
+  const cm=datosCajaMes(),dinero=n=>Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+  $('resumenCajaMes').innerHTML=`Entradas: ${dinero(cm.entradas)} · Salidas: ${dinero(cm.salidas)} · Resultado: ${dinero(cm.resultado)}`;
+  $('listaCajaMes').innerHTML=cm.a.length?cm.a.map(x=>`<div class="listadoFila"><b>${escHtml(x.fecha)} · ${x.tipo==='entrada'?'➕':'➖'} ${dinero(x.importe)}</b><div>${escHtml(x.concepto)}</div></div>`).join(''):'<div>Sin movimientos en este mes.</div>';
+  renderHistorial();
+  $('movs').innerHTML=db.mov.length?db.mov.map(x=>`<div class="item"><b>${x.fecha} · ${x.tipo==='entrada'?'➕':'➖'} ${Number(x.importe).toFixed(2)} €</b><div>${x.concepto}</div><div class="actions"><button class="light" onclick="eliminarCaja(${x.id})">🗑️ BORRAR</button></div></div>`).join(''):'<div>Sin movimientos.</div>';
+}
+// Ejemplos exclusivamente para la demostración: almacenamiento aislado.
+if(!localStorage.getItem(LOCAL_KEY)){
+ const fecha=hoy();
+ db={caja:370,trabajos:[
+ {id:90001,fecha,cliente:'Cliente de ejemplo A',telefono:'',matricula:'1234ABC',vehiculo:'Seat León',km:'',direccion:'',trabajo:'Revisar avería de motor',obs:'[[PRIORIDAD:Alta]]',estado:'Abierto'},
+ {id:90002,fecha,cliente:'Cliente de ejemplo B',telefono:'',matricula:'5678DEF',vehiculo:'Volkswagen Golf',km:'',direccion:'',trabajo:'Cambio de aceite y filtros',obs:'[[PRIORIDAD:Normal]]',estado:'Abierto'},
+ {id:90003,fecha,cliente:'Cliente de ejemplo C',telefono:'',matricula:'9012GHI',vehiculo:'Ford Focus',km:'',direccion:'',trabajo:'Diagnosis eléctrica',obs:'[[PRIORIDAD:Alta]]',estado:'Abierto'}
+ ],agenda:[{id:91001,fecha,cliente:'Cita de ejemplo',telefono:'',matricula:'3456JKL',vehiculo:'Renault Clio',trabajo:'Revisión de frenos',estado:'Pendiente'}],mov:[{id:92001,fecha,tipo:'entrada',importe:85,concepto:'Cobro de ejemplo'},{id:92002,fecha,tipo:'salida',importe:30,concepto:'Compra de ejemplo'}]};
+ localStorage.setItem(LOCAL_KEY,JSON.stringify(db));
+}
+if(!localStorage.getItem(DEUDAS_KEY)){
+ deudas=[{id:93001,cliente:'Deudor de ejemplo',telefono:'',matricula:'7890MNO',fecha:hoy(),concepto:'Reparación de ejemplo',total:140,pagos:[]}];
+ localStorage.setItem(DEUDAS_KEY,JSON.stringify(deudas));
+}
+init();
+mostrar('inicio');
+</script>
+</body>
+</html>
